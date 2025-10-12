@@ -12,11 +12,14 @@ The app motivates users by sending notifications when their friends complete com
 
 **Group Members and Roles**
 
-| [Berk Öztekin] | [31916] |  ------ |
-| [Üye 2 İsmi] | [00XXXXX] | ------ |
-| [Üye 3 İsmi] | [00XXXXX] | -------- |
-| [Üye 4 İsmi] | [00XXXXX] | -------- |
-| [Üye 5 İsmi] | [00XXXXX] | --------- |
+| Name | Student ID | Role | 
+|------|-------------|------|
+| **İsa Görkem Akdoğan** | 34480 | Documentation & Submission Lead |
+| **Cem Eren Fukara** | 34481 | Integration & Repository Lead |
+| **İsmail Taha Güler** | 33848 | Learning & Research Lead  |
+| **Furkan Eren** | 34365 | Testing & Quality Assurance Lead   |
+| **Enes Salih Sezer** | 33879 | Project Coordinator  |
+| **Berk Öztekin** | 31916 | Presentation & Communication Lead  |
 
 
 **Target Audience**
