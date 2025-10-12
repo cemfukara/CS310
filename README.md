@@ -12,5 +12,12 @@ The app motivates users by sending notifications when their friends complete com
 
 **Group Members and Roles**
 
+| [Berk Öztekin] | [31916] |  ------ |
+| [Üye 2 İsmi] | [00XXXXX] | ------ |
+| [Üye 3 İsmi] | [00XXXXX] | -------- |
+| [Üye 4 İsmi] | [00XXXXX] | -------- |
+| [Üye 5 İsmi] | [00XXXXX] | --------- |
 
+
+**Target Audience**
 
