@@ -22,5 +22,3 @@ The app motivates users by sending notifications when their friends complete com
 | **Berk Öztekin** | 31916 | Presentation & Communication Lead  |
 
 
-**Target Audience**
-
