@@ -6,7 +6,7 @@ import 'profile_screen.dart';
 import 'promises_screen.dart';
 import 'friends_screen.dart';
 import 'settings_screen.dart';
-import 'store_screen.dart';
+import 'store_inventory_screen.dart';
 import 'achievements_screen.dart';
 
 /// Home Dashboard Screen - Main page with BottomNavigationBar
@@ -62,9 +62,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
     return SingleChildScrollView(
       padding: EdgeInsets.all(
-        isSmallScreen
-            ? AppStyles.paddingMedium
-            : AppStyles.paddingLarge,
+        isSmallScreen ? AppStyles.paddingMedium : AppStyles.paddingLarge,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -283,9 +281,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                 height: 80,
                 decoration: BoxDecoration(
                   color: priorityColor,
-                  borderRadius: const BorderRadius.all(
-                    Radius.circular(2),
-                  ),
+                  borderRadius: const BorderRadius.all(Radius.circular(2)),
                 ),
               ),
               const SizedBox(width: AppStyles.paddingMedium),
@@ -300,9 +296,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                         Expanded(
                           child: Text(
                             promise.title,
-                            style: AppStyles.labelLarge.copyWith(
-                              fontSize: 16,
-                            ),
+                            style: AppStyles.labelLarge.copyWith(fontSize: 16),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -342,10 +336,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                           color: AppStyles.mediumGray,
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          promise.category,
-                          style: AppStyles.bodySmall,
-                        ),
+                        Text(promise.category, style: AppStyles.bodySmall),
                       ],
                     ),
                   ],
@@ -354,9 +345,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
               // Delete Button
               Padding(
-                padding: const EdgeInsets.only(
-                  left: AppStyles.paddingMedium,
-                ),
+                padding: const EdgeInsets.only(left: AppStyles.paddingMedium),
                 child: IconButton(
                   icon: const Icon(Icons.delete_outline),
                   color: AppStyles.errorRed,
@@ -404,7 +393,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
         const ScheduleScreen(),
         const PromisesScreen(),
         const FriendsScreen(),
-        const StoreScreen(),
+        const StoreInventoryScreen(),
         const AchievementsScreen(),
         const ProfileScreen(),
       ][_selectedIndex],
