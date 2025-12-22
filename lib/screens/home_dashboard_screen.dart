@@ -75,7 +75,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     }
   }
 
-  // --- HOME TAB (REAL DATA) ---
+  // --- HOME TAB (REAL DATA + REFRESH) ---
   Widget _buildHomeTab(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 600;
@@ -89,49 +89,57 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
         final promises = promiseProvider.promises;
 
-        return SingleChildScrollView(
-          padding: EdgeInsets.all(
-            isSmallScreen ? AppStyles.paddingMedium : AppStyles.paddingLarge,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: AppStyles.paddingMedium,
+        // 2. Wrap in RefreshIndicator for Pull-to-Refresh
+        return RefreshIndicator(
+          onRefresh: () async {
+            await promiseProvider.reload();
+          },
+          child: SingleChildScrollView(
+            // AlwaysScrollableScrollPhysics ensures pull-to-refresh works even if list is short
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.all(
+              isSmallScreen ? AppStyles.paddingMedium : AppStyles.paddingLarge,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppStyles.paddingMedium,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text('Today\'s Promises', style: AppStyles.headingLarge),
+                      const SizedBox(height: AppStyles.paddingSmall),
+                      Text(
+                        '${promises.length} commitments total',
+                        style: AppStyles.bodyMedium,
+                      ),
+                    ],
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text('Today\'s Promises', style: AppStyles.headingLarge),
-                    const SizedBox(height: AppStyles.paddingSmall),
-                    Text(
-                      '${promises.length} commitments total',
-                      style: AppStyles.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppStyles.paddingLarge),
+                const SizedBox(height: AppStyles.paddingLarge),
 
-              // Profile Card
-              _buildProfileCard(context, isSmallScreen),
-              const SizedBox(height: AppStyles.paddingXLarge),
+                // Profile Card
+                _buildProfileCard(context, isSmallScreen),
+                const SizedBox(height: AppStyles.paddingXLarge),
 
-              // Promises List (Real Data)
-              if (promises.isEmpty)
-                _buildEmptyState()
-              else
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: promises.length,
-                  itemBuilder: (context, index) {
-                    return _buildPromiseCard(context, promises[index]);
-                  },
-                ),
-            ],
+                // Promises List (Real Data)
+                if (promises.isEmpty)
+                  _buildEmptyState()
+                else
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: promises.length,
+                    itemBuilder: (context, index) {
+                      return _buildPromiseCard(context, promises[index]);
+                    },
+                  ),
+              ],
+            ),
           ),
         );
       },
@@ -252,8 +260,14 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            // Navigate to New Promise Screen
-            onPressed: () => Navigator.pushNamed(context, '/new-promise'),
+            // --- UPDATED: Navigate & Auto-Refresh ---
+            onPressed: () async {
+              await Navigator.pushNamed(context, '/new-promise');
+              // This runs after you come back from the new promise screen
+              if (mounted) {
+                Provider.of<PromiseProvider>(context, listen: false).reload();
+              }
+            },
           ),
         ],
       ),

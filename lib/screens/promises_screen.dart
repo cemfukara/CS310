@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../utils/app_styles.dart';
-import 'new_promise_screen.dart';
-import 'edit_promise_screen.dart';
+import '../providers/promise_provider.dart';
+import '../models/promise_model.dart';
 
 /// Promises Screen - View all promises across all categories
 class PromisesScreen extends StatefulWidget {
@@ -13,114 +14,181 @@ class PromisesScreen extends StatefulWidget {
 
 class _PromisesScreenState extends State<PromisesScreen> {
   String _selectedCategory = 'All';
-  final List<String> _categories = ['All', 'Work', 'Personal', 'Health', 'Family'];
+  // You might want to fetch these dynamically later, but static is fine for now
+  final List<String> _categories = ['All', 'Work', 'Personal', 'Health', 'Family', 'Recurring', 'One-time'];
+
+  // Helper to determine status string from model
+  String _getStatus(PromiseModel promise) {
+    if (promise.isCompleted) return 'Completed';
+
+    final now = DateTime.now();
+    if (now.isAfter(promise.startTime) && now.isBefore(promise.endTime)) {
+      return 'In Progress';
+    }
+    if (now.isAfter(promise.endTime)) {
+      return 'Overdue';
+    }
+    return 'Pending';
+  }
+
+  // Helper to get color based on status
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Completed': return AppStyles.successGreen;
+      case 'In Progress': return AppStyles.infoBlue;
+      case 'Overdue': return AppStyles.errorRed;
+      default: return AppStyles.warningOrange; // Pending
+    }
+  }
+
+  // Helper to get icon based on status
+  IconData _getStatusIcon(String status) {
+    switch (status) {
+      case 'Completed': return Icons.check_circle;
+      case 'In Progress': return Icons.schedule;
+      case 'Overdue': return Icons.error_outline;
+      default: return Icons.pending; // Pending
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 600;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('All Promises'),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const NewPromiseScreen(),
-                ),
-              );
-            },
-            tooltip: 'Create New Promise',
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(
-          isSmallScreen ? AppStyles.paddingMedium : AppStyles.paddingLarge,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Category Filter
-            SizedBox(
-              height: 48,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: _categories.length,
-                itemBuilder: (context, index) {
-                  final category = _categories[index];
-                  final isSelected = category == _selectedCategory;
+    return Consumer<PromiseProvider>(
+      builder: (context, promiseProvider, child) {
+        final allPromises = promiseProvider.promises;
 
-                  return Padding(
-                    padding: const EdgeInsets.only(right: AppStyles.paddingSmall),
-                    child: FilterChip(
-                      label: Text(category),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        setState(() {
-                          _selectedCategory = category;
-                        });
+        // 1. Calculate Stats
+        int completedCount = 0;
+        int inProgressCount = 0;
+        int pendingCount = 0;
+
+        for (var p in allPromises) {
+          String status = _getStatus(p);
+          if (status == 'Completed') completedCount++;
+          else if (status == 'In Progress') inProgressCount++;
+          else pendingCount++; // Groups Pending and Overdue for simple stats
+        }
+
+        // 2. Filter List based on Category
+        final filteredPromises = _selectedCategory == 'All'
+            ? allPromises
+            : allPromises.where((p) => p.category == _selectedCategory).toList();
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('All Promises'),
+            centerTitle: true,
+            // REMOVED: The actions block with the "+" button was here.
+          ),
+          // 3. Add Refresh Indicator
+          body: RefreshIndicator(
+            onRefresh: () async {
+              await promiseProvider.reload();
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(), // Ensures pull-to-refresh always works
+              padding: EdgeInsets.all(
+                isSmallScreen ? AppStyles.paddingMedium : AppStyles.paddingLarge,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Category Filter
+                  SizedBox(
+                    height: 48,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _categories.length,
+                      itemBuilder: (context, index) {
+                        final category = _categories[index];
+                        final isSelected = category == _selectedCategory;
+
+                        return Padding(
+                          padding: const EdgeInsets.only(right: AppStyles.paddingSmall),
+                          child: FilterChip(
+                            label: Text(category),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              setState(() {
+                                _selectedCategory = category;
+                              });
+                            },
+                            backgroundColor: AppStyles.nearWhite,
+                            selectedColor: AppStyles.primaryPurple,
+                            labelStyle: AppStyles.labelMedium.copyWith(
+                              color: isSelected ? AppStyles.white : AppStyles.darkGray,
+                            ),
+                          ),
+                        );
                       },
-                      backgroundColor: AppStyles.nearWhite,
-                      selectedColor: AppStyles.primaryPurple,
-                      labelStyle: AppStyles.labelMedium.copyWith(
-                        color: isSelected ? AppStyles.white : AppStyles.darkGray,
-                      ),
                     ),
-                  );
-                },
+                  ),
+                  const SizedBox(height: AppStyles.paddingLarge),
+
+                  // Promise Stats (Real Data)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatCard(
+                          icon: Icons.check_circle,
+                          label: 'Completed',
+                          value: '$completedCount',
+                          color: AppStyles.successGreen,
+                        ),
+                      ),
+                      const SizedBox(width: AppStyles.paddingMedium),
+                      Expanded(
+                        child: _buildStatCard(
+                          icon: Icons.hourglass_bottom,
+                          label: 'In Progress',
+                          value: '$inProgressCount',
+                          color: AppStyles.infoBlue,
+                        ),
+                      ),
+                      const SizedBox(width: AppStyles.paddingMedium),
+                      Expanded(
+                        child: _buildStatCard(
+                          icon: Icons.pending,
+                          label: 'Pending',
+                          value: '$pendingCount',
+                          color: AppStyles.warningOrange,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppStyles.paddingXLarge),
+
+                  // Promises List Title
+                  Text(
+                    'All Promises',
+                    style: AppStyles.headingSmall,
+                  ),
+                  const SizedBox(height: AppStyles.paddingMedium),
+
+                  // Promises List (Real Data)
+                  if (promiseProvider.isLoading)
+                    const Center(child: Padding(
+                      padding: EdgeInsets.all(20.0),
+                      child: CircularProgressIndicator(),
+                    ))
+                  else if (filteredPromises.isEmpty)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(40.0),
+                        child: Text("No promises found in this category."),
+                      ),
+                    )
+                  else
+                    ..._buildRealPromisesList(context, filteredPromises, promiseProvider),
+                ],
               ),
             ),
-            const SizedBox(height: AppStyles.paddingLarge),
-
-            // Promise Stats
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(
-                    icon: Icons.check_circle,
-                    label: 'Completed',
-                    value: '12',
-                    color: AppStyles.successGreen,
-                  ),
-                ),
-                const SizedBox(width: AppStyles.paddingMedium),
-                Expanded(
-                  child: _buildStatCard(
-                    icon: Icons.hourglass_bottom,
-                    label: 'In Progress',
-                    value: '8',
-                    color: AppStyles.infoBlue,
-                  ),
-                ),
-                const SizedBox(width: AppStyles.paddingMedium),
-                Expanded(
-                  child: _buildStatCard(
-                    icon: Icons.pending,
-                    label: 'Pending',
-                    value: '5',
-                    color: AppStyles.warningOrange,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppStyles.paddingXLarge),
-
-            // Promises List
-            Text(
-              'All Promises',
-              style: AppStyles.headingSmall,
-            ),
-            const SizedBox(height: AppStyles.paddingMedium),
-            ..._buildPromisesList(),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -147,33 +215,11 @@ class _PromisesScreenState extends State<PromisesScreen> {
     );
   }
 
-  List<Widget> _buildPromisesList() {
-    final promises = [
-      {'title': 'Complete Quarterly Report', 'category': 'Work', 'status': 'In Progress'},
-      {'title': 'Call Parents Weekly', 'category': 'Family', 'status': 'Completed'},
-      {'title': 'Gym 3x Per Week', 'category': 'Health', 'status': 'In Progress'},
-      {'title': 'Read 1 Book', 'category': 'Personal', 'status': 'Completed'},
-      {'title': 'Team Building Event', 'category': 'Work', 'status': 'Pending'},
-      {'title': 'Meditation Daily', 'category': 'Personal', 'status': 'In Progress'},
-    ];
-
+  List<Widget> _buildRealPromisesList(BuildContext context, List<PromiseModel> promises, PromiseProvider provider) {
     return promises.map((promise) {
-      Color statusColor;
-      IconData statusIcon;
-
-      switch (promise['status']) {
-        case 'Completed':
-          statusColor = AppStyles.successGreen;
-          statusIcon = Icons.check_circle;
-          break;
-        case 'In Progress':
-          statusColor = AppStyles.infoBlue;
-          statusIcon = Icons.schedule;
-          break;
-        default:
-          statusColor = AppStyles.warningOrange;
-          statusIcon = Icons.pending;
-      }
+      final status = _getStatus(promise);
+      final statusColor = _getStatusColor(status);
+      final statusIcon = _getStatusIcon(status);
 
       return Padding(
         padding: const EdgeInsets.only(bottom: AppStyles.paddingMedium),
@@ -188,10 +234,10 @@ class _PromisesScreenState extends State<PromisesScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(promise['title']!, style: AppStyles.bodyLarge),
+                      Text(promise.title, style: AppStyles.bodyLarge),
                       const SizedBox(height: 4),
                       Text(
-                        promise['category']!,
+                        promise.category,
                         style: AppStyles.bodySmall,
                       ),
                     ],
@@ -207,7 +253,7 @@ class _PromisesScreenState extends State<PromisesScreen> {
                     borderRadius: AppStyles.borderRadiusSmallAll,
                   ),
                   child: Text(
-                    promise['status']!,
+                    status,
                     style: AppStyles.labelSmall.copyWith(color: statusColor),
                   ),
                 ),
@@ -215,13 +261,16 @@ class _PromisesScreenState extends State<PromisesScreen> {
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),
                   color: AppStyles.primaryPurple,
-                  onPressed: () {
-                    Navigator.push(
+                  onPressed: () async {
+                    // Navigate to edit and refresh on return
+                    await Navigator.pushNamed(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => const EditPromiseScreen(),
-                      ),
+                      '/edit-promise',
+                      arguments: promise,
                     );
+                    if (mounted) {
+                      provider.reload();
+                    }
                   },
                   tooltip: 'Edit Promise',
                 ),

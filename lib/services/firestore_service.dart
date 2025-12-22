@@ -7,71 +7,57 @@ class FirestoreService implements DatabaseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Helper to get the current logged-in user's ID
   String? get _userId => _auth.currentUser?.uid;
-
-  // Collection Reference (DRY - Don't Repeat Yourself)
-  CollectionReference get _promisesCollection => _db.collection('promises');
 
   @override
   Future<void> createPromise({
     required String title,
     required String description,
-    required DateTime dueDate,
+    required DateTime startTime,
+    required DateTime endTime,
+    required bool isRecursive,
     required String category,
     required int priority,
   }) async {
-    if (_userId == null) throw Exception("User must be logged in to create a promise");
+    if (_userId == null) return;
 
-    // We don't create a PromiseModel here yet because we don't have an ID.
-    // We send the Map directly to Firestore.
-    await _promisesCollection.add({
+    await _db.collection('promises').add({
       'title': title,
       'description': description,
-      'dueDate': Timestamp.fromDate(dueDate), // Convert DateTime to Timestamp
+      'startTime': Timestamp.fromDate(startTime),
+      'endTime': Timestamp.fromDate(endTime),
+      'isRecursive': isRecursive,
+      'isCompleted': false,
+      'createdBy': _userId,
+      'createdAt': FieldValue.serverTimestamp(),
       'category': category,
       'priority': priority,
-      'isCompleted': false,
-      'createdBy': _userId, // Automatically link to current user
-      'createdAt': FieldValue.serverTimestamp(), // Server-side time
     });
   }
+
+  // ... (getPromisesStream, updatePromise, deletePromise remain largely the same,
+  // just ensure they use PromiseModel.fromFirestore)
 
   @override
   Stream<List<PromiseModel>> getPromisesStream() {
     if (_userId == null) return const Stream.empty();
 
-    return _promisesCollection
-        .where('createdBy', isEqualTo: _userId) // Security: Only show my data
-        .orderBy('createdAt', descending: true)
+    return _db.collection('promises')
+        .where('createdBy', isEqualTo: _userId)
+        .orderBy('startTime', descending: false) // Order by Start Time now
         .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        // use the fromFirestore factory we created
-        return PromiseModel.fromFirestore(doc);
-      }).toList();
-    });
+        .map((snapshot) => snapshot.docs.map((doc) => PromiseModel.fromFirestore(doc)).toList());
   }
 
+  // Include updatePromise and deletePromise implementations here...
   @override
   Future<void> updatePromise(PromiseModel promise) async {
     if (_userId == null) return;
-
-    // We use .toMap() here to convert our object back to data Firestore understands
-    // We do NOT update 'createdBy' or 'createdAt' to preserve history
-    await _promisesCollection.doc(promise.id).update(promise.toMap());
-  }
-
-  // Specific helper to toggle status quickly (optional but useful)
-  Future<void> toggleStatus(String promiseId, bool currentStatus) async {
-    await _promisesCollection.doc(promiseId).update({
-      'isCompleted': !currentStatus,
-    });
+    await _db.collection('promises').doc(promise.id).update(promise.toMap());
   }
 
   @override
   Future<void> deletePromise(String promiseId) async {
-    if (_userId == null) return;
-    await _promisesCollection.doc(promiseId).delete();
+    await _db.collection('promises').doc(promiseId).delete();
   }
 }

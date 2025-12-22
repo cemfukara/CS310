@@ -38,14 +38,21 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
 
   // --- SAVE LOGIC (NEW) ---
 
+  // REPLACE your existing _handleCreatePromise with this:
+
   Future<void> _handleCreatePromise() async {
-    // 1. Validation
     if (_nameController.text.trim().isEmpty) {
       _showErrorSnackbar("Please enter a promise name.");
       return;
     }
 
-    // 2. Show Loading
+    // Check if at least one slot has valid times
+    bool hasValidSlot = dynamicSlots.any((slot) => slot['start'] != null && slot['end'] != null);
+    if (!hasValidSlot) {
+      _showErrorSnackbar("Please set a start and end time for your promise.");
+      return;
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -55,44 +62,38 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
     try {
       final promiseProvider = Provider.of<PromiseProvider>(context, listen: false);
 
-      // 3. Determine Due Date (Logic: Use the end time of the first slot, or tomorrow if empty)
-      // Since your UI is complex (recurring/slots), you might need to adjust how you map this
-      // to the simple 'dueDate' field in your current PromiseModel.
-      DateTime calculatedDueDate = DateTime.now().add(const Duration(days: 1));
+      // LOOP: Create a separate promise for every slot defined
+      for (var slot in dynamicSlots) {
+        if (slot['start'] != null && slot['end'] != null) {
 
-      if (dynamicSlots.isNotEmpty && dynamicSlots[0]['end'] != null) {
-        calculatedDueDate = dynamicSlots[0]['end']!;
+          await promiseProvider.addPromise(
+            title: _nameController.text.trim(),
+            description: _descriptionController.text.trim(),
+            startTime: slot['start']!,
+            endTime: slot['end']!,
+            isRecursive: isRecurring, // Use the state variable from your widget
+            category: isRecurring ? 'Recurring' : 'One-time',
+            priority: difficultyStars,
+          );
+
+        }
       }
 
-      // 4. Save to Firestore via Provider
-      await promiseProvider.addPromise(
-        title: _nameController.text.trim(),
-        description: _descriptionController.text.trim(),
-        dueDate: calculatedDueDate,
-        // We are saving your custom UI state into the description or category
-        // for now since the basic model might not have fields for 'recurring' yet.
-        // You can expand your PromiseModel later to support these specifically.
-        category: isRecurring ? 'Recurring' : 'One-time',
-        priority: difficultyStars,
-      );
-
       if (mounted) {
-        // Close Loading Dialog
-        Navigator.of(context).pop();
-        // Close Screen (Return to Home)
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(); // Close Loader
+        Navigator.of(context).pop(); // Close Screen
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Promise created successfully!'),
+            content: Text('Promise(s) saved successfully!'),
             backgroundColor: AppStyles.successGreen,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
-        Navigator.of(context).pop(); // Close Loading
-        _showErrorSnackbar("Error creating promise: $e");
+        Navigator.of(context).pop();
+        _showErrorSnackbar("Error saving: $e");
       }
     }
   }

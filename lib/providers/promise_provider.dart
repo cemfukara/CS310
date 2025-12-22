@@ -39,29 +39,34 @@ class PromiseProvider with ChangeNotifier {
     );
   }
 
-  // CREATE: Matches the signature in DatabaseService
+  // RELOAD METHOD
+  Future<void> reload() async {
+    _listenToPromises();
+    await Future.delayed(const Duration(milliseconds: 500));
+  }
+
+  // CREATE
   Future<void> addPromise({
     required String title,
     required String description,
-    required DateTime dueDate,
+    required DateTime startTime,
+    required DateTime endTime,
+    required bool isRecursive,
     required String category,
     required int priority,
   }) async {
-    try {
-      await _db.createPromise(
-        title: title,
-        description: description,
-        dueDate: dueDate,
-        category: category,
-        priority: priority,
-      );
-    } catch (e) {
-      print("Error adding promise: $e");
-      rethrow; // Handle error in UI
-    }
+    await _db.createPromise(
+      title: title,
+      description: description,
+      startTime: startTime,
+      endTime: endTime,
+      isRecursive: isRecursive,
+      category: category,
+      priority: priority,
+    );
   }
 
-  // UPDATE: Updates the full object
+  // UPDATE
   Future<void> updatePromise(PromiseModel promise) async {
     try {
       await _db.updatePromise(promise);
@@ -71,25 +76,34 @@ class PromiseProvider with ChangeNotifier {
     }
   }
 
-  // DELETE
+  // --- DELETE (FIXED: Optimistic Update) ---
   Future<void> deletePromise(String id) async {
     try {
+      // 1. Remove from local list IMMEDIATELY so it vanishes from screen
+      _promises.removeWhere((p) => p.id == id);
+      notifyListeners();
+
+      // 2. Then Delete from Database
       await _db.deletePromise(id);
     } catch (e) {
       print("Error deleting promise: $e");
+      // If there was an error, re-fetch the list to bring it back
+      _listenToPromises();
     }
   }
 
-  // TOGGLE STATUS: Helper to toggle isCompleted without passing the whole object from UI
+  // TOGGLE STATUS
   Future<void> toggleStatus(String id, bool newStatus) async {
     try {
-      // Find the promise in our local list so we can clone it
       final index = _promises.indexWhere((p) => p.id == id);
       if (index != -1) {
         final promise = _promises[index];
         final updatedPromise = promise.copyWith(isCompleted: newStatus);
 
-        // Update in Firestore
+        // Optimistic update
+        _promises[index] = updatedPromise;
+        notifyListeners();
+
         await _db.updatePromise(updatedPromise);
       }
     } catch (e) {
@@ -99,7 +113,7 @@ class PromiseProvider with ChangeNotifier {
 
   @override
   void dispose() {
-    _promisesSubscription?.cancel(); // STOP LISTENING when provider is destroyed
+    _promisesSubscription?.cancel();
     super.dispose();
   }
 }
