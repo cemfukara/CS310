@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../utils/app_styles.dart';
+import '../providers/auth_provider.dart';
 import 'signup_screen.dart';
+import 'home_dashboard_screen.dart';
 
 /// Login Screen - User input form with validation
 class LoginScreen extends StatefulWidget {
@@ -13,8 +16,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   late final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late final TextEditingController _emailController = TextEditingController();
-  late final TextEditingController _passwordController =
-      TextEditingController();
+  late final TextEditingController _passwordController = TextEditingController();
 
   // Track if form has been submitted (to show errors on first attempt)
   bool _hasSubmitted = false;
@@ -31,13 +33,10 @@ class _LoginScreenState extends State<LoginScreen> {
     if (value == null || value.isEmpty) {
       return 'Email is required';
     }
-
-    // Basic email validation regex
     const emailRegex = r'^[^@]+@[^@]+\.[^@]+$';
     if (!RegExp(emailRegex).hasMatch(value)) {
       return 'Please enter a valid email address';
     }
-
     return null;
   }
 
@@ -46,43 +45,47 @@ class _LoginScreenState extends State<LoginScreen> {
     if (value == null || value.isEmpty) {
       return 'Password is required';
     }
-
     if (value.length < 6) {
       return 'Password must be at least 6 characters';
     }
-
     return null;
   }
 
   /// Handle login form submission
-  void _handleLogin() {
+  void _handleLogin() async {
     setState(() {
       _hasSubmitted = true;
     });
 
     if (_formKey.currentState!.validate()) {
-      // Form is valid - proceed to home
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Login successful!'),
-          duration: Duration(milliseconds: 1500),
-        ),
+      final authProvider = context.read<AuthProvider>();
+
+      // Attempt login
+      bool success = await authProvider.login(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
       );
 
-      // Navigate to home screen
-      Future.delayed(const Duration(milliseconds: 500), () {
+      if (success) {
         if (mounted) {
-          Navigator.of(context).pushReplacementNamed('/home');
+          // Success! Navigate to HomeDashboardScreen
+          // We use pushReplacement so the user can't press "Back" to return to Login
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeDashboardScreen()),
+          );
         }
-      });
-    } else {
-      // Form is invalid - show error dialog
-      _showErrorDialog();
+      } else {
+        if (mounted) {
+          // Show the error from Firebase
+          _showErrorDialog(authProvider.errorMessage ?? "Login failed. Please check your credentials.");
+        }
+      }
     }
   }
 
   /// Show error dialog with validation summary
-  void _showErrorDialog() {
+  void _showErrorDialog([String? message]) {
     final errors = <String>[];
 
     if (_validateEmail(_emailController.text) != null) {
@@ -91,6 +94,8 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_validatePassword(_passwordController.text) != null) {
       errors.add('• ${_validatePassword(_passwordController.text)}');
     }
+
+    String content = message ?? errors.join('\n');
 
     showDialog(
       context: context,
@@ -121,14 +126,14 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(width: AppStyles.paddingMedium),
               const Expanded(
                 child: Text(
-                  'Validation Error',
+                  'Error',
                   style: AppStyles.headingSmall,
                 ),
               ),
             ],
           ),
           content: Text(
-            errors.join('\n'),
+            content,
             style: AppStyles.bodyMedium,
           ),
           actions: [
@@ -256,7 +261,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               prefixIcon: const Icon(Icons.lock_outlined),
                               prefixIconColor: AppStyles.primaryPurple,
                               suffixIcon:
-                                  const Icon(Icons.visibility_off_outlined),
+                              const Icon(Icons.visibility_off_outlined),
                               suffixIconColor: AppStyles.mediumGray,
                             ),
                             validator: _validatePassword,
