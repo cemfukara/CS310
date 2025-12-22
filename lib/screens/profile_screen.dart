@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../utils/app_styles.dart';
+import '../providers/auth_provider.dart';
 import 'settings_screen.dart';
 
-/// Profile Screen - User profile display with placeholder fields
+/// Profile Screen - Displays real user data from Firebase Auth
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -11,20 +13,36 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // Placeholder user data
-  final Map<String, String> _userProfile = {
-    'name': 'John',
-    'surname': 'Doe',
-    'email': 'john.doe@example.com',
-    'workplace': 'Tech Company Inc.',
-    'id': 'EMP-2024-001',
-    'gender': 'Male',
-  };
-
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 600;
+
+    // 1. Get the real user from AuthProvider
+    final authProvider = Provider.of<AuthProvider>(context);
+    final user = authProvider.user;
+
+    // 2. Parse Name (Updated Logic)
+    // Splits "Isa Gorkem Akdogan" correctly into First: "Isa Gorkem", Last: "Akdogan"
+    String firstName = '';
+    String lastName = '';
+
+    if (user?.displayName != null && user!.displayName!.isNotEmpty) {
+      List<String> nameParts = user.displayName!.split(' ');
+      if (nameParts.isNotEmpty) {
+        if (nameParts.length == 1) {
+          // If only one name exists (e.g. "Isa"), it's the first name
+          firstName = nameParts.first;
+        } else {
+          // Take the LAST part as the Last Name
+          lastName = nameParts.last;
+          // Join all previous parts as the First Name
+          firstName = nameParts.sublist(0, nameParts.length - 1).join(' ');
+        }
+      }
+    }
+
+    final email = user?.email ?? 'No email';
 
     return Scaffold(
       appBar: AppBar(
@@ -58,7 +76,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: Column(
                 children: [
-                  // Profile Image with Local Asset Fallback
+                  // Profile Image
                   Container(
                     width: isSmallScreen ? 120 : 160,
                     height: isSmallScreen ? 120 : 160,
@@ -68,32 +86,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       border: Border.all(color: AppStyles.white, width: 3),
                       boxShadow: AppStyles.shadowMedium,
                     ),
-                    child: Image.asset(
-                      'assets/images/profile_placeholder.png',
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        // Fallback UI when asset doesn't exist
-                        return Container(
-                          decoration: BoxDecoration(
-                            color: AppStyles.nearWhite,
-                            borderRadius: AppStyles.borderRadiusXLargeAll,
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.person_outline,
-                              size: 60,
-                              color: AppStyles.mediumGray,
-                            ),
-                          ),
-                        );
-                      },
+                    child: Center(
+                      child: Text(
+                        firstName.isNotEmpty ? firstName[0].toUpperCase() : '?',
+                        style: const TextStyle(
+                          fontSize: 60,
+                          fontWeight: FontWeight.bold,
+                          color: AppStyles.primaryPurple,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: AppStyles.paddingLarge),
 
                   // User Name
                   Text(
-                    '${_userProfile['name']} ${_userProfile['surname']}',
+                    user?.displayName ?? 'User',
                     style: AppStyles.headingMedium.copyWith(
                       color: AppStyles.white,
                     ),
@@ -101,9 +109,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: AppStyles.paddingSmall),
 
-                  // User Role/Title
+                  // User Email
                   Text(
-                    'Team Member',
+                    email,
                     style: AppStyles.bodyMedium.copyWith(
                       color: AppStyles.white.withOpacity(0.8),
                     ),
@@ -118,50 +126,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Text('Personal Information', style: AppStyles.headingSmall),
             const SizedBox(height: AppStyles.paddingMedium),
 
-            // Profile Fields
+            // Profile Fields (Real Data)
             _buildProfileField(
               label: 'First Name',
-              value: _userProfile['name'] ?? '',
+              value: firstName,
               icon: Icons.person_outline,
             ),
             const SizedBox(height: AppStyles.paddingMedium),
 
             _buildProfileField(
               label: 'Last Name',
-              value: _userProfile['surname'] ?? '',
+              value: lastName,
               icon: Icons.person_outline,
             ),
             const SizedBox(height: AppStyles.paddingMedium),
 
             _buildProfileField(
               label: 'Email',
-              value: _userProfile['email'] ?? '',
+              value: email,
               icon: Icons.email_outlined,
-            ),
-            const SizedBox(height: AppStyles.paddingLarge),
-
-            // Work/School Information Section
-            Text('Work Information', style: AppStyles.headingSmall),
-            const SizedBox(height: AppStyles.paddingMedium),
-
-            _buildProfileField(
-              label: 'Workplace/School',
-              value: _userProfile['workplace'] ?? '',
-              icon: Icons.work_outline,
-            ),
-            const SizedBox(height: AppStyles.paddingMedium),
-
-            _buildProfileField(
-              label: 'Employee ID',
-              value: _userProfile['id'] ?? '',
-              icon: Icons.badge_outlined,
-            ),
-            const SizedBox(height: AppStyles.paddingMedium),
-
-            _buildProfileField(
-              label: 'Gender',
-              value: _userProfile['gender'] ?? '',
-              icon: Icons.wc_outlined,
             ),
             const SizedBox(height: AppStyles.paddingXLarge),
 
@@ -215,33 +198,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Container(
       padding: const EdgeInsets.all(AppStyles.paddingMedium),
-
       decoration: BoxDecoration(
-        color: colorScheme.surface, // <-- follows theme
+        color: colorScheme.surface,
         borderRadius: AppStyles.borderRadiusMediumAll,
         border: Border.all(
-          color: colorScheme.outlineVariant, // <-- follows theme
+          color: colorScheme.outlineVariant,
           width: 1,
         ),
       ),
-
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(AppStyles.paddingSmall),
             decoration: BoxDecoration(
-              color: colorScheme.primary.withOpacity(0.15), // <-- adaptive
+              color: colorScheme.primary.withOpacity(0.15),
               borderRadius: AppStyles.borderRadiusSmallAll,
             ),
             child: Icon(
               icon,
-              color: colorScheme.primary, // <-- adaptive
+              color: colorScheme.primary,
               size: AppStyles.iconSizeMedium,
             ),
           ),
-
           const SizedBox(width: AppStyles.paddingMedium),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -249,14 +228,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Text(
                   label,
                   style: textTheme.labelSmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant, // <-- visible in dark
+                    color: colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  value,
+                  value.isNotEmpty ? value : 'Not set',
                   style: textTheme.bodyLarge?.copyWith(
-                    color: colorScheme.onSurface, // <-- visible in dark
+                    color: colorScheme.onSurface,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -316,8 +295,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             TextButton(
               onPressed: () {
+                // Call the Logout method in Provider
+                Provider.of<AuthProvider>(context, listen: false).logout();
                 Navigator.of(context).pop();
-                Navigator.of(context).pushReplacementNamed('/login');
+                // AuthWrapper in main.dart will handle the redirect to Login
               },
               child: Text(
                 'Log Out',
