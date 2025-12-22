@@ -64,9 +64,10 @@ class FirestoreService implements DatabaseService {
     // Create a searchable document
     await _db.collection('users').doc(uid).set({
       'uid': uid,
+      'createdBy': uid, // <--- ADDED: Critical for Security Rules
       'email': email,
       'displayName': displayName,
-      'searchEmail': email.toLowerCase(), // Helper for searching
+      'searchEmail': email.toLowerCase(),
     }, SetOptions(merge: true));
   }
 

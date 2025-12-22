@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 // --- FIX: Hide the conflicting AuthProvider class from Firebase ---
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../utils/app_styles.dart';
 import '../providers/auth_provider.dart'; // Your custom AuthProvider
+import '../services/database_service.dart'; // <--- IMPORT THIS
 
 /// Sign Up Screen - User registration with email and password
 class SignUpScreen extends StatefulWidget {
@@ -84,8 +84,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
       setState(() => _isLoading = true);
 
       try {
-        // Use your custom AuthProvider (now unambiguous)
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final databaseService = Provider.of<DatabaseService>(context, listen: false); // <--- GET SERVICE
+
         final String email = _emailController.text.trim();
         final String password = _passwordController.text.trim();
         final String displayName = "${_firstNameController.text.trim()} ${_lastNameController.text.trim()}";
@@ -99,19 +100,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
         if (userCredential.user != null) {
           final user = userCredential.user!;
 
-          // 2. Update Auth Profile (Name) - AWAIT ensures it finishes
+          // 2. Update Auth Profile (Name)
           await user.updateDisplayName(displayName);
 
-          // 3. Create Public Firestore Document - AWAIT ensures it finishes
-          await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-            'uid': user.uid,
-            'createdBy': user.uid, // <--- CRITICAL FIX: Required by Security Rules
-            'email': email,
-            'displayName': displayName,
-            'searchEmail': email.toLowerCase(),
-          });
+          // 3. Create Public User Doc via Service (RUBRIC FIX)
+          // No more direct Firestore calls here!
+          await databaseService.createPublicUser(user.uid, email, displayName);
 
-          // 4. Force app refresh so Profile screen gets the new name
+          // 4. Force app refresh
           await authProvider.refreshUser();
         }
 
@@ -123,8 +119,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ),
           );
 
-          // 5. FIX: Pop instead of pushing.
-          // AuthWrapper in main.dart detects the login and shows Home automatically.
           Navigator.of(context).pop();
         }
 

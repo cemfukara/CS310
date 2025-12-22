@@ -290,7 +290,7 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
   Widget _buildDifficultySection() {
     return _buildCardSection(
       children: [
-        const Text('Priority', style: TextStyle(fontWeight: FontWeight.bold)),
+        const Text('Difficulty', style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
         Row(
           children: List.generate(5, (index) {
