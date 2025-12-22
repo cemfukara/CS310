@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 /// Data model representing a single Promise/Commitment
 class PromiseModel {
   final String id;
@@ -8,6 +10,10 @@ class PromiseModel {
   final int priority; // 1 (low) to 5 (high)
   final bool isCompleted;
 
+  // -- NEW FIELDS FOR FIRESTORE --
+  final String createdBy; // User ID
+  final DateTime createdAt; // Timestamp
+
   PromiseModel({
     required this.id,
     required this.title,
@@ -16,31 +22,44 @@ class PromiseModel {
     required this.category,
     required this.priority,
     this.isCompleted = false,
+    required this.createdBy,
+    required this.createdAt,
   });
 
-  /// Factory constructor to create a PromiseModel from a JSON map
-  factory PromiseModel.fromJson(Map<String, dynamic> json) {
+  /// Factory constructor to create a PromiseModel from a Firestore Document
+  factory PromiseModel.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
     return PromiseModel(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      description: json['description'] as String,
-      dueDate: DateTime.parse(json['dueDate'] as String),
-      category: json['category'] as String,
-      priority: json['priority'] as int,
-      isCompleted: json['isCompleted'] as bool? ?? false,
+      id: doc.id, // We use the Document ID from Firestore as our Model ID
+      title: data['title'] ?? '',
+      description: data['description'] ?? '',
+      // Handle Firestore Timestamp conversion safely
+      dueDate: (data['dueDate'] is Timestamp)
+          ? (data['dueDate'] as Timestamp).toDate()
+          : DateTime.now(),
+      category: data['category'] ?? 'General',
+      priority: data['priority'] ?? 1,
+      isCompleted: data['isCompleted'] ?? false,
+      createdBy: data['createdBy'] ?? '',
+      createdAt: (data['createdAt'] is Timestamp)
+          ? (data['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
     );
   }
 
-  /// Convert PromiseModel to JSON map
-  Map<String, dynamic> toJson() {
+  /// Convert PromiseModel to Map for Firestore
+  Map<String, dynamic> toMap() {
     return {
-      'id': id,
       'title': title,
       'description': description,
-      'dueDate': dueDate.toIso8601String(),
+      // Convert DateTime to Timestamp for Firestore
+      'dueDate': Timestamp.fromDate(dueDate),
       'category': category,
       'priority': priority,
       'isCompleted': isCompleted,
+      'createdBy': createdBy,
+      'createdAt': Timestamp.fromDate(createdAt),
     };
   }
 
@@ -53,6 +72,8 @@ class PromiseModel {
     String? category,
     int? priority,
     bool? isCompleted,
+    String? createdBy,
+    DateTime? createdAt,
   }) {
     return PromiseModel(
       id: id ?? this.id,
@@ -62,21 +83,25 @@ class PromiseModel {
       category: category ?? this.category,
       priority: priority ?? this.priority,
       isCompleted: isCompleted ?? this.isCompleted,
+      createdBy: createdBy ?? this.createdBy,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is PromiseModel &&
-          runtimeType == other.runtimeType &&
-          id == other.id &&
-          title == other.title &&
-          description == other.description &&
-          dueDate == other.dueDate &&
-          category == other.category &&
-          priority == other.priority &&
-          isCompleted == other.isCompleted;
+          other is PromiseModel &&
+              runtimeType == other.runtimeType &&
+              id == other.id &&
+              title == other.title &&
+              description == other.description &&
+              dueDate == other.dueDate &&
+              category == other.category &&
+              priority == other.priority &&
+              isCompleted == other.isCompleted &&
+              createdBy == other.createdBy &&
+              createdAt == other.createdAt;
 
   @override
   int get hashCode =>
@@ -86,11 +111,13 @@ class PromiseModel {
       dueDate.hashCode ^
       category.hashCode ^
       priority.hashCode ^
-      isCompleted.hashCode;
+      isCompleted.hashCode ^
+      createdBy.hashCode ^
+      createdAt.hashCode;
 
   @override
   String toString() {
-    return 'PromiseModel(id: $id, title: $title, dueDate: $dueDate, priority: $priority, isCompleted: $isCompleted)';
+    return 'PromiseModel(id: $id, title: $title, status: $isCompleted, user: $createdBy)';
   }
 
   /// Get dummy/sample promises for testing and display purposes
@@ -105,6 +132,8 @@ class PromiseModel {
         category: 'Work',
         priority: 5,
         isCompleted: false,
+        createdBy: 'test_user',
+        createdAt: now,
       ),
       PromiseModel(
         id: '2',
@@ -114,6 +143,8 @@ class PromiseModel {
         category: 'Personal',
         priority: 4,
         isCompleted: false,
+        createdBy: 'test_user',
+        createdAt: now,
       ),
       PromiseModel(
         id: '3',
@@ -123,24 +154,8 @@ class PromiseModel {
         category: 'Health',
         priority: 3,
         isCompleted: false,
-      ),
-      PromiseModel(
-        id: '4',
-        title: 'Review Code',
-        description: 'Review pull requests from team members',
-        dueDate: now,
-        category: 'Work',
-        priority: 4,
-        isCompleted: false,
-      ),
-      PromiseModel(
-        id: '5',
-        title: 'Prepare Presentation',
-        description: 'Prepare slides for tomorrow\'s meeting',
-        dueDate: now.add(const Duration(days: 1)),
-        category: 'Work',
-        priority: 5,
-        isCompleted: false,
+        createdBy: 'test_user',
+        createdAt: now,
       ),
     ];
   }

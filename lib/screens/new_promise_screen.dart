@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' as intl;
+import 'package:provider/provider.dart'; // Import Provider
 import '../utils/app_styles.dart';
+import '../models/promise_model.dart'; // Import your Model
+import '../providers/promise_provider.dart'; // Import your Provider
 
 /// New Promise Screen - Create a new promise with slots and difficulty settings
 class NewPromiseScreen extends StatefulWidget {
@@ -31,6 +34,67 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
     _nameController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  // --- SAVE LOGIC (NEW) ---
+
+  Future<void> _handleCreatePromise() async {
+    // 1. Validation
+    if (_nameController.text.trim().isEmpty) {
+      _showErrorSnackbar("Please enter a promise name.");
+      return;
+    }
+
+    // 2. Show Loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final promiseProvider = Provider.of<PromiseProvider>(context, listen: false);
+
+      // 3. Determine Due Date (Logic: Use the end time of the first slot, or tomorrow if empty)
+      // Since your UI is complex (recurring/slots), you might need to adjust how you map this
+      // to the simple 'dueDate' field in your current PromiseModel.
+      DateTime calculatedDueDate = DateTime.now().add(const Duration(days: 1));
+
+      if (dynamicSlots.isNotEmpty && dynamicSlots[0]['end'] != null) {
+        calculatedDueDate = dynamicSlots[0]['end']!;
+      }
+
+      // 4. Save to Firestore via Provider
+      await promiseProvider.addPromise(
+        title: _nameController.text.trim(),
+        description: _descriptionController.text.trim(),
+        dueDate: calculatedDueDate,
+        // We are saving your custom UI state into the description or category
+        // for now since the basic model might not have fields for 'recurring' yet.
+        // You can expand your PromiseModel later to support these specifically.
+        category: isRecurring ? 'Recurring' : 'One-time',
+        priority: difficultyStars,
+      );
+
+      if (mounted) {
+        // Close Loading Dialog
+        Navigator.of(context).pop();
+        // Close Screen (Return to Home)
+        Navigator.of(context).pop();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Promise created successfully!'),
+            backgroundColor: AppStyles.successGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop(); // Close Loading
+        _showErrorSnackbar("Error creating promise: $e");
+      }
+    }
   }
 
   // --- SLOT MANAGEMENT METHODS ---
@@ -101,9 +165,9 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
             value: selectedDay,
             items: weekdays
                 .map((day) => DropdownMenuItem<String>(
-                      value: day,
-                      child: Text(day),
-                    ))
+              value: day,
+              child: Text(day),
+            ))
                 .toList(),
             onChanged: (newValue) {
               selectedDay = newValue;
@@ -172,9 +236,9 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
 
   void _pickDifficultyTime() async {
     TextEditingController hoursController =
-        TextEditingController(text: difficultyTime['hours'].toString());
+    TextEditingController(text: difficultyTime['hours'].toString());
     TextEditingController minutesController =
-        TextEditingController(text: difficultyTime['minutes'].toString());
+    TextEditingController(text: difficultyTime['minutes'].toString());
 
     await showDialog(
       context: context,
@@ -460,13 +524,13 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
       final startLabel = startTime != null
           ? intl.DateFormat(dateFormat).format(startTime)
           : isRecurring
-              ? 'Day hh:mm'
-              : 'dd/MMM/yy HH:mm';
+          ? 'Day hh:mm'
+          : 'dd/MMM/yy HH:mm';
       final endLabel = endTime != null
           ? intl.DateFormat(dateFormat).format(endTime)
           : isRecurring
-              ? 'Day hh:mm'
-              : 'dd/MMM/yy HH:mm';
+          ? 'Day hh:mm'
+          : 'dd/MMM/yy HH:mm';
 
       final isStartSelected = startTime != null;
       final isEndSelected = endTime != null;
@@ -594,10 +658,19 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
         Row(
           children: List.generate(
             5,
-            (index) {
-              return Icon(
-                index < difficultyStars ? Icons.star : Icons.star_border,
-                color: Colors.yellow[700],
+                (index) {
+              return IconButton(
+                onPressed: () {
+                  setState(() {
+                    difficultyStars = index + 1;
+                  });
+                },
+                icon: Icon(
+                  index < difficultyStars ? Icons.star : Icons.star_border,
+                  color: Colors.yellow[700],
+                ),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
               );
             },
           ),
@@ -608,11 +681,11 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
           children: [
             _buildPeriodChip(
               'Total',
-              (label) => setState(() => selectedDifficultyPeriod = label),
+                  (label) => setState(() => selectedDifficultyPeriod = label),
             ),
             _buildPeriodChip(
               'Per week',
-              (label) => setState(() => selectedDifficultyPeriod = label),
+                  (label) => setState(() => selectedDifficultyPeriod = label),
             ),
             InkWell(
               onTap: () {
@@ -629,14 +702,8 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
         Align(
           alignment: Alignment.centerRight,
           child: ElevatedButton(
-            onPressed: () {
-              if (_nameController.text.isEmpty) {
-                _showErrorSnackbar("Please enter a promise name.");
-                return;
-              }
-              // Navigate to Edit Promise Screen
-              Navigator.pushNamed(context, '/edit-promise');
-            },
+            // --- CONNECTED THE NEW SAVE FUNCTION HERE ---
+            onPressed: _handleCreatePromise,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppStyles.primaryPurple,
               padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
