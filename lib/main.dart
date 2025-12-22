@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import 'package:promise/providers/auth_provider.dart';
 import 'package:promise/providers/promise_provider.dart';
 import 'package:promise/providers/theme_provider.dart'; // Kept your ThemeProvider
+import 'package:promise/models/user_model.dart'; // import if needed
+import 'package:promise/providers/friends_provider.dart'; // IMPORT THIS
 
 // Services
 import 'package:promise/services/database_service.dart';
@@ -27,27 +29,20 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        // 1. Auth Provider
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-
-        // 2. Database Service (Linked to Auth)
         ProxyProvider<AuthProvider, DatabaseService>(
-          update: (_, auth, __) {
-            return FirestoreService();
-          },
+          update: (_, auth, __) => FirestoreService(),
         ),
-
-        // 3. Promise Provider (Depends on DatabaseService)
         ChangeNotifierProxyProvider<DatabaseService, PromiseProvider>(
-          create: (context) => PromiseProvider(
-            Provider.of<DatabaseService>(context, listen: false),
-          ),
-          update: (_, db, previous) {
-            return PromiseProvider(db);
-          },
+          create: (context) => PromiseProvider(Provider.of<DatabaseService>(context, listen: false)),
+          update: (_, db, __) => PromiseProvider(db),
         ),
-
-        // 4. Theme Provider
+        // --- ADD THIS BLOCK ---
+        ChangeNotifierProxyProvider<DatabaseService, FriendsProvider>(
+          create: (context) => FriendsProvider(Provider.of<DatabaseService>(context, listen: false)),
+          update: (_, db, __) => FriendsProvider(db),
+        ),
+        // ---------------------
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
       child: const PromiseApp(),

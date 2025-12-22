@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // 1. Added this import
+import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/app_styles.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Sign Up Screen - User registration with email and password
 class SignUpScreen extends StatefulWidget {
@@ -121,6 +122,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
+
+        // 4. Update Display Name
+        String displayName = "${_firstNameController.text.trim()} ${_lastNameController.text.trim()}";
+
+        if (userCredential.user != null) {
+          await userCredential.user!.updateDisplayName(displayName);
+
+          await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
+            'uid': userCredential.user!.uid,
+            'email': _emailController.text.trim(),
+            'displayName': displayName,
+            'searchEmail': _emailController.text.trim().toLowerCase(),
+          });
+        }
 
         // 4. Update Display Name (Since you have First/Last name inputs)
         // This ensures the user's name is stored in their Auth profile immediately.

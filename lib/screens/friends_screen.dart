@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../utils/app_styles.dart';
+import '../providers/friends_provider.dart';
+import '../models/user_model.dart';
 
-/// Friends Screen - Connect and share promises with friends
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
 
@@ -9,271 +11,216 @@ class FriendsScreen extends StatefulWidget {
   State<FriendsScreen> createState() => _FriendsScreenState();
 }
 
-class _FriendsScreenState extends State<FriendsScreen> {
-  String _searchQuery = '';
-  final List<Map<String, String>> _friends = [
-    {
-      'name': 'Sarah Johnson',
-      'status': 'Active',
-      'sharedPromises': '3',
-      'avatar': 'SJ'
-    },
-    {
-      'name': 'Mike Chen',
-      'status': 'Active',
-      'sharedPromises': '5',
-      'avatar': 'MC'
-    },
-    {
-      'name': 'Emma Davis',
-      'status': 'Inactive',
-      'sharedPromises': '2',
-      'avatar': 'ED'
-    },
-  ];
-
-  final List<Map<String, String>> _friendRequests = [
-    {'name': 'Alex Turner', 'avatar': 'AT', 'mutual': '3'},
-    {'name': 'Jordan Lee', 'avatar': 'JL', 'mutual': '2'},
-  ];
+class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
 
   @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isSmallScreen = screenWidth < 600;
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Friends'),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(
-          isSmallScreen ? AppStyles.paddingMedium : AppStyles.paddingLarge,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Search Bar
-            TextField(
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                });
-              },
-              decoration: InputDecoration(
-                hintText: 'Search friends...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: AppStyles.borderRadiusSmallAll,
-                ),
-              ),
-            ),
-            const SizedBox(height: AppStyles.paddingLarge),
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
-            // Friend Requests Section
-            Text('Friend Requests', style: AppStyles.headingSmall),
-            const SizedBox(height: AppStyles.paddingMedium),
-            ..._buildFriendRequests(),
-            const SizedBox(height: AppStyles.paddingXLarge),
+  void _showAddFriendDialog() {
+    final emailController = TextEditingController();
+    bool isSearching = false;
 
-            // Friends Section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Add Friend'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text('My Friends (${_friends.length})', style: AppStyles.headingSmall),
-                ElevatedButton.icon(
-                  onPressed: _showAddFriendDialog,
-                  icon: const Icon(Icons.person_add),
-                  label: const Text('Add'),
+                const Text('Enter the exact email of your friend to send a request.'),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    hintText: 'friend@example.com',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.email),
+                  ),
                 ),
+                if (isSearching)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 10.0),
+                    child: LinearProgressIndicator(),
+                  ),
               ],
             ),
-            const SizedBox(height: AppStyles.paddingMedium),
-            ..._buildFriendsList(),
-          ],
-        ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: isSearching ? null : () async {
+                  if (emailController.text.isEmpty) return;
+
+                  setState(() => isSearching = true);
+
+                  final provider = Provider.of<FriendsProvider>(context, listen: false);
+                  final error = await provider.sendRequest(emailController.text);
+
+                  if (mounted) {
+                    setState(() => isSearching = false);
+                    Navigator.pop(context); // Close dialog
+
+                    if (error == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Friend request sent!'),
+                          backgroundColor: AppStyles.successGreen,
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(error),
+                          backgroundColor: AppStyles.errorRed,
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Send Request'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  List<Widget> _buildFriendRequests() {
-    return _friendRequests.map((request) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: AppStyles.paddingMedium),
-        child: Card(
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<FriendsProvider>(
+      builder: (context, provider, child) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Friends'),
+            centerTitle: true,
+            bottom: TabBar(
+              controller: _tabController,
+              indicatorColor: AppStyles.white,
+              labelColor: AppStyles.white,
+              unselectedLabelColor: Colors.white70,
+              tabs: [
+                Tab(text: 'My Friends (${provider.friends.length})'),
+                Tab(text: 'Requests (${provider.requests.length})'),
+              ],
+            ),
+          ),
+          body: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildFriendsList(provider.friends),
+              _buildRequestsList(provider),
+            ],
+          ),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: _showAddFriendDialog,
+            backgroundColor: AppStyles.primaryPurple,
+            icon: const Icon(Icons.person_add, color: Colors.white),
+            label: const Text('Add Friend', style: TextStyle(color: Colors.white)),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFriendsList(List<UserModel> friends) {
+    if (friends.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.people_outline, size: 60, color: Colors.grey[400]),
+            const SizedBox(height: 10),
+            Text("No friends yet.", style: TextStyle(color: Colors.grey[600])),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: friends.length,
+      itemBuilder: (context, index) {
+        final friend = friends[index];
+        final initials = friend.displayName.isNotEmpty ? friend.displayName[0].toUpperCase() : '?';
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: AppStyles.accentPink,
+              child: Text(initials, style: const TextStyle(color: Colors.white)),
+            ),
+            title: Text(friend.displayName, style: AppStyles.bodyLarge),
+            subtitle: Text(friend.email, style: AppStyles.bodySmall),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRequestsList(FriendsProvider provider) {
+    final requests = provider.requests;
+
+    if (requests.isEmpty) {
+      return const Center(child: Text("No pending requests."));
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: requests.length,
+      itemBuilder: (context, index) {
+        final req = requests[index];
+        final initials = req.displayName.isNotEmpty ? req.displayName[0].toUpperCase() : '?';
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
           child: Padding(
-            padding: const EdgeInsets.all(AppStyles.paddingMedium),
+            padding: const EdgeInsets.all(12.0),
             child: Row(
               children: [
                 CircleAvatar(
                   backgroundColor: AppStyles.primaryPurple,
-                  child: Text(
-                    request['avatar']!,
-                    style: const TextStyle(color: AppStyles.white),
-                  ),
+                  child: Text(initials, style: const TextStyle(color: Colors.white)),
                 ),
-                const SizedBox(width: AppStyles.paddingMedium),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(request['name']!, style: AppStyles.bodyLarge),
-                      Text(
-                        '${request['mutual']!} mutual friends',
-                        style: AppStyles.bodySmall,
-                      ),
+                      Text(req.displayName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(req.email, style: const TextStyle(fontSize: 12, color: Colors.grey)),
                     ],
                   ),
                 ),
-                TextButton(
-                  onPressed: () => _respondToRequest(request['name']!, true),
-                  child: const Text('Accept'),
+                IconButton(
+                  icon: const Icon(Icons.check_circle, color: AppStyles.successGreen, size: 30),
+                  onPressed: () => provider.acceptRequest(req),
                 ),
-                TextButton(
-                  onPressed: () => _respondToRequest(request['name']!, false),
-                  child: const Text('Decline'),
+                IconButton(
+                  icon: const Icon(Icons.cancel, color: AppStyles.errorRed, size: 30),
+                  onPressed: () => provider.declineRequest(req.uid),
                 ),
               ],
             ),
           ),
-        ),
-      );
-    }).toList();
-  }
-
-  List<Widget> _buildFriendsList() {
-    final filteredFriends = _friends
-        .where((friend) =>
-            friend['name']!.toLowerCase().contains(_searchQuery.toLowerCase()))
-        .toList();
-
-    if (filteredFriends.isEmpty) {
-      return [
-        Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: AppStyles.paddingXLarge),
-            child: Text(
-              _searchQuery.isEmpty ? 'No friends yet' : 'No friends found',
-              style: AppStyles.bodyMedium,
-            ),
-          ),
-        ),
-      ];
-    }
-
-    return filteredFriends.map((friend) {
-      final isActive = friend['status'] == 'Active';
-      return Padding(
-        padding: const EdgeInsets.only(bottom: AppStyles.paddingMedium),
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.all(AppStyles.paddingMedium),
-            child: Row(
-              children: [
-                Stack(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: AppStyles.accentPink,
-                      child: Text(
-                        friend['avatar']!,
-                        style: const TextStyle(color: AppStyles.white),
-                      ),
-                    ),
-                    if (isActive)
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            color: AppStyles.successGreen,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppStyles.white,
-                              width: 2,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(width: AppStyles.paddingMedium),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(friend['name']!, style: AppStyles.bodyLarge),
-                      Text(
-                        '${friend['sharedPromises']!} shared promises',
-                        style: AppStyles.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-                PopupMenuButton(
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(child: Text('View Profile')),
-                    const PopupMenuItem(child: Text('View Promises')),
-                    const PopupMenuItem(
-                      child: Text('Remove Friend'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }).toList();
-  }
-
-  void _respondToRequest(String name, bool accept) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          accept
-              ? 'You are now friends with $name'
-              : 'Friend request declined',
-        ),
-      ),
-    );
-  }
-
-  void _showAddFriendDialog() {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Friend'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'Enter friend name or email',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (controller.text.isNotEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Friend request sent to ${controller.text}'),
-                  ),
-                );
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Send Request'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
