@@ -16,7 +16,8 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   late final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late final TextEditingController _emailController = TextEditingController();
-  late final TextEditingController _passwordController = TextEditingController();
+  late final TextEditingController _passwordController =
+      TextEditingController();
 
   // Track if form has been submitted (to show errors on first attempt)
   bool _hasSubmitted = false;
@@ -75,7 +76,10 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         if (mounted) {
           // Show the error from Firebase
-          _showErrorDialog(authProvider.errorMessage ?? "Login failed. Please check your credentials.");
+          _showErrorDialog(
+            authProvider.errorMessage ??
+                "Login failed. Please check your credentials.",
+          );
         }
       }
     }
@@ -101,10 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
           backgroundColor: AppStyles.white,
           shape: RoundedRectangleBorder(
             borderRadius: AppStyles.borderRadiusMediumAll,
-            side: const BorderSide(
-              color: AppStyles.lightGray,
-              width: 1.5,
-            ),
+            side: const BorderSide(color: AppStyles.lightGray, width: 1.5),
           ),
           title: Row(
             children: [
@@ -122,17 +123,11 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(width: AppStyles.paddingMedium),
               const Expanded(
-                child: Text(
-                  'Error',
-                  style: AppStyles.headingSmall,
-                ),
+                child: Text('Error', style: AppStyles.headingSmall),
               ),
             ],
           ),
-          content: Text(
-            content,
-            style: AppStyles.bodyMedium,
-          ),
+          content: Text(content, style: AppStyles.bodyMedium),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -217,10 +212,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text(
-                            'Email Address',
-                            style: AppStyles.labelLarge,
-                          ),
+                          Text('Email Address', style: AppStyles.labelLarge),
                           const SizedBox(height: AppStyles.paddingSmall),
                           TextFormField(
                             controller: _emailController,
@@ -245,10 +237,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text(
-                            'Password',
-                            style: AppStyles.labelLarge,
-                          ),
+                          Text('Password', style: AppStyles.labelLarge),
                           const SizedBox(height: AppStyles.paddingSmall),
                           TextFormField(
                             controller: _passwordController,
@@ -257,8 +246,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               hintText: 'Enter your password',
                               prefixIcon: const Icon(Icons.lock_outlined),
                               prefixIconColor: AppStyles.primaryPurple,
-                              suffixIcon:
-                              const Icon(Icons.visibility_off_outlined),
+                              suffixIcon: const Icon(
+                                Icons.visibility_off_outlined,
+                              ),
                               suffixIconColor: AppStyles.mediumGray,
                             ),
                             validator: _validatePassword,
@@ -276,6 +266,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       ElevatedButton(
                         onPressed: _handleLogin,
                         style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              Theme.of(context).brightness == Brightness.light
+                              ? AppStyles
+                                    .primaryPurple // Custom color
+                              : null, // null = fall back to global theme (dark mode)
                           padding: const EdgeInsets.symmetric(
                             vertical: AppStyles.paddingMedium,
                           ),
