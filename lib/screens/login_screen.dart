@@ -68,12 +68,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (success) {
         if (mounted) {
-          // Success! Navigate to HomeDashboardScreen
-          // We use pushReplacement so the user can't press "Back" to return to Login
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomeDashboardScreen()),
-          );
+          // ✅ FIX: Do NOT navigate manually.
+          // AuthWrapper in main.dart detects the login and swaps to Home automatically.
+          FocusScope.of(context).unfocus();
         }
       } else {
         if (mounted) {

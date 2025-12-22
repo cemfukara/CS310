@@ -15,12 +15,21 @@ class AuthProvider with ChangeNotifier {
   bool get isAuthenticated => _user != null;
 
   AuthProvider() {
-    // Listen to Firebase Auth changes in real-time
     _authService.authStateChanges.listen((User? newUser) {
       _user = newUser;
       notifyListeners();
     });
   }
+
+  // --- NEW: Refresh User Method ---
+  Future<void> refreshUser() async {
+    if (_user != null) {
+      await _user!.reload(); // Ask Firebase for the latest data (Name, etc.)
+      _user = _authService.currentUser; // Update local reference
+      notifyListeners(); // Update the UI
+    }
+  }
+  // --------------------------------
 
   void _setLoading(bool value) {
     _isLoading = value;
@@ -39,11 +48,11 @@ class AuthProvider with ChangeNotifier {
     try {
       await _authService.signUp(email: email, password: password);
       _setLoading(false);
-      return true; // Success
+      return true;
     } catch (e) {
       _setMessage(e.toString());
       _setLoading(false);
-      return false; // Failure
+      return false;
     }
   }
 
@@ -54,11 +63,11 @@ class AuthProvider with ChangeNotifier {
     try {
       await _authService.signIn(email: email, password: password);
       _setLoading(false);
-      return true; // Success
+      return true;
     } catch (e) {
       _setMessage(e.toString());
       _setLoading(false);
-      return false; // Failure
+      return false;
     }
   }
 
@@ -68,7 +77,6 @@ class AuthProvider with ChangeNotifier {
     _setMessage(null);
   }
 
-  // Clear errors manually if needed
   void clearError() {
     _errorMessage = null;
     notifyListeners();
