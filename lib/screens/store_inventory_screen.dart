@@ -675,38 +675,40 @@ class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
   void _openStoreDrawer(Map<String, dynamic> item) {
     showModalBottomSheet(
       context: context,
-      showDragHandle: true,
       isScrollControlled: true,
-      builder: (_) {
-        final price = item["price"];
-        final owned = item["owned"];
-
-        return Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(item["icon"], size: 80, color: AppStyles.primaryPurple),
-              const SizedBox(height: 16),
-              Text(item["name"], style: AppStyles.headingSmall),
-              const SizedBox(height: 8),
-              Text(
-                "Category: ${item["category"]}",
-                style: AppStyles.bodyMedium,
-              ),
-              const SizedBox(height: 20),
-
-              owned
-                  ? const Text("You already own this item.")
-                  : ElevatedButton(
-                      onPressed: () => _buy(item),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppStyles.primaryPurple,
-                        foregroundColor: AppStyles.white,
+      useSafeArea: true,
+      constraints: const BoxConstraints(
+        maxWidth: double.infinity, // <-- force full width
+      ),
+      builder: (context) {
+        return SizedBox(
+          width: MediaQuery.of(context).size.width, // <-- full width
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(item["icon"], size: 80, color: AppStyles.primaryPurple),
+                const SizedBox(height: 16),
+                Text(item["name"], style: AppStyles.headingSmall),
+                const SizedBox(height: 8),
+                Text(
+                  "Category: ${item["category"]}",
+                  style: AppStyles.bodyMedium,
+                ),
+                const SizedBox(height: 20),
+                item["owned"]
+                    ? const Text("You already own this item.")
+                    : ElevatedButton(
+                        onPressed: () => _buy(item),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppStyles.primaryPurple,
+                          foregroundColor: AppStyles.white,
+                        ),
+                        child: Text("Buy for ${item["price"]} 🪙"),
                       ),
-                      child: Text("Buy for $price 🪙"),
-                    ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -719,32 +721,36 @@ class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
   void _openInventoryDrawer(Map<String, dynamic> item) {
     showModalBottomSheet(
       context: context,
-      showDragHandle: true,
       isScrollControlled: true,
-      builder: (_) {
-        return Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(item["icon"], size: 80, color: AppStyles.primaryPurple),
-              const SizedBox(height: 16),
-              Text(item["name"], style: AppStyles.headingSmall),
-              const SizedBox(height: 8),
-              Text(
-                "Category: ${item["category"]}",
-                style: AppStyles.bodyMedium,
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppStyles.successGreen,
-                  foregroundColor: AppStyles.white,
+      useSafeArea: true,
+      constraints: const BoxConstraints(maxWidth: double.infinity),
+      builder: (context) {
+        return SizedBox(
+          width: MediaQuery.of(context).size.width,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(item["icon"], size: 80, color: AppStyles.primaryPurple),
+                const SizedBox(height: 16),
+                Text(item["name"], style: AppStyles.headingSmall),
+                const SizedBox(height: 8),
+                Text(
+                  "Category: ${item["category"]}",
+                  style: AppStyles.bodyMedium,
                 ),
-                child: const Text("Equip"),
-              ),
-            ],
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () {},
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppStyles.successGreen,
+                    foregroundColor: AppStyles.white,
+                  ),
+                  child: const Text("Equip"),
+                ),
+              ],
+            ),
           ),
         );
       },
