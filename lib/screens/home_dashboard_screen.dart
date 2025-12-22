@@ -11,6 +11,7 @@ import 'settings_screen.dart';
 import 'store_inventory_screen.dart';
 import 'achievements_screen.dart';
 import 'new_promise_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeDashboardScreen extends StatefulWidget {
   const HomeDashboardScreen({super.key});
@@ -22,17 +23,36 @@ class HomeDashboardScreen extends StatefulWidget {
 class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   int _selectedIndex = 0;
 
-  void _onItemTapped(int index) {
+  @override
+  void initState() {
+    super.initState();
+    _loadLastTab();
+  }
+
+  Future<void> _loadLastTab() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _selectedIndex = prefs.getInt('last_tab') ?? 0; // default tab = 0 (Home)
+    });
+  }
+
+  void _onItemTapped(int index) async {
     setState(() {
       _selectedIndex = index;
     });
+
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setInt('last_tab', index); // store selected tab
   }
 
   // --- DELETE FUNCTION ---
   void _deletePromise(BuildContext context, String promiseId) async {
     try {
       // Call the provider to delete from Firebase
-      await Provider.of<PromiseProvider>(context, listen: false).deletePromise(promiseId);
+      await Provider.of<PromiseProvider>(
+        context,
+        listen: false,
+      ).deletePromise(promiseId);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -46,7 +66,10 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppStyles.errorRed),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppStyles.errorRed,
+          ),
         );
       }
     }
@@ -67,19 +90,26 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
         final promises = promiseProvider.promises;
 
         return SingleChildScrollView(
-          padding: EdgeInsets.all(isSmallScreen ? AppStyles.paddingMedium : AppStyles.paddingLarge),
+          padding: EdgeInsets.all(
+            isSmallScreen ? AppStyles.paddingMedium : AppStyles.paddingLarge,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Header
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppStyles.paddingMedium),
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppStyles.paddingMedium,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text('Today\'s Promises', style: AppStyles.headingLarge),
                     const SizedBox(height: AppStyles.paddingSmall),
-                    Text('${promises.length} commitments total', style: AppStyles.bodyMedium),
+                    Text(
+                      '${promises.length} commitments total',
+                      style: AppStyles.bodyMedium,
+                    ),
                   ],
                 ),
               ),
@@ -117,12 +147,19 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
             color: AppStyles.primaryPurple.withOpacity(0.1),
             borderRadius: AppStyles.borderRadiusLargeAll,
           ),
-          child: const Icon(Icons.done_all, size: 48, color: AppStyles.primaryPurple),
+          child: const Icon(
+            Icons.done_all,
+            size: 48,
+            color: AppStyles.primaryPurple,
+          ),
         ),
         const SizedBox(height: AppStyles.paddingLarge),
         Text('No promises found', style: AppStyles.headingMedium),
         const SizedBox(height: AppStyles.paddingSmall),
-        Text('Tap the + button to create your first promise!', style: AppStyles.bodyMedium),
+        Text(
+          'Tap the + button to create your first promise!',
+          style: AppStyles.bodyMedium,
+        ),
       ],
     );
   }
@@ -135,7 +172,8 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
         child: Row(
           children: [
             Container(
-              width: 80, height: 80,
+              width: 80,
+              height: 80,
               decoration: BoxDecoration(
                 color: AppStyles.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(50),
@@ -147,9 +185,17 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Keep Going!', style: AppStyles.headingSmall.copyWith(color: AppStyles.white)),
+                  Text(
+                    'Keep Going!',
+                    style: AppStyles.headingSmall.copyWith(
+                      color: AppStyles.white,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text('Stay focused on your goals.', style: AppStyles.bodyMedium.copyWith(color: Colors.white70)),
+                  Text(
+                    'Stay focused on your goals.',
+                    style: AppStyles.bodyMedium.copyWith(color: Colors.white70),
+                  ),
                 ],
               ),
             ),
@@ -160,23 +206,34 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   }
 
   Widget _buildPromiseCard(BuildContext context, PromiseModel promise) {
-    Color priorityColor = promise.priority >= 5 ? AppStyles.errorRed : AppStyles.successGreen;
+    Color priorityColor = promise.priority >= 5
+        ? AppStyles.errorRed
+        : AppStyles.successGreen;
     if (promise.priority == 4) priorityColor = AppStyles.warningOrange;
     if (promise.priority == 3) priorityColor = AppStyles.infoBlue;
 
     return Card(
       margin: const EdgeInsets.only(bottom: AppStyles.paddingMedium),
       child: ListTile(
-        leading: Container(
-          width: 4, height: 50,
-          color: priorityColor,
+        leading: Container(width: 4, height: 50, color: priorityColor),
+        title: Text(
+          promise.title,
+          style: AppStyles.labelLarge.copyWith(color: Colors.black87),
         ),
-        title: Text(promise.title, style: AppStyles.labelLarge.copyWith(color: Colors.black87)),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(promise.description, maxLines: 1, overflow: TextOverflow.ellipsis),
-            Text(promise.category, style: AppStyles.bodySmall.copyWith(color: AppStyles.primaryPurple)),
+            Text(
+              promise.description,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              promise.category,
+              style: AppStyles.bodySmall.copyWith(
+                color: AppStyles.primaryPurple,
+              ),
+            ),
           ],
         ),
         trailing: IconButton(
@@ -215,11 +272,17 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: 'Schedule'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today),
+            label: 'Schedule',
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.list), label: 'Promises'),
           BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Friends'),
           BottomNavigationBarItem(icon: Icon(Icons.store), label: 'Store'),
-          BottomNavigationBarItem(icon: Icon(Icons.emoji_events), label: 'Awards'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.emoji_events),
+            label: 'Awards',
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),

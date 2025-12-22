@@ -36,9 +36,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const SettingsScreen(),
-                ),
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
               );
             },
           ),
@@ -46,9 +44,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(
-          isSmallScreen
-              ? AppStyles.paddingMedium
-              : AppStyles.paddingLarge,
+          isSmallScreen ? AppStyles.paddingMedium : AppStyles.paddingLarge,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -69,10 +65,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     decoration: BoxDecoration(
                       color: AppStyles.white,
                       borderRadius: AppStyles.borderRadiusXLargeAll,
-                      border: Border.all(
-                        color: AppStyles.white,
-                        width: 3,
-                      ),
+                      border: Border.all(color: AppStyles.white, width: 3),
                       boxShadow: AppStyles.shadowMedium,
                     ),
                     child: Image.asset(
@@ -122,10 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: AppStyles.paddingXLarge),
 
             // Profile Information Section
-            Text(
-              'Personal Information',
-              style: AppStyles.headingSmall,
-            ),
+            Text('Personal Information', style: AppStyles.headingSmall),
             const SizedBox(height: AppStyles.paddingMedium),
 
             // Profile Fields
@@ -151,10 +141,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: AppStyles.paddingLarge),
 
             // Work/School Information Section
-            Text(
-              'Work Information',
-              style: AppStyles.headingSmall,
-            ),
+            Text('Work Information', style: AppStyles.headingSmall),
             const SizedBox(height: AppStyles.paddingMedium),
 
             _buildProfileField(
@@ -222,43 +209,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String value,
     required IconData icon,
   }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
     return Container(
       padding: const EdgeInsets.all(AppStyles.paddingMedium),
+
       decoration: BoxDecoration(
-        color: AppStyles.nearWhite,
+        color: colorScheme.surface, // <-- follows theme
         borderRadius: AppStyles.borderRadiusMediumAll,
         border: Border.all(
-          color: AppStyles.lightGray,
+          color: colorScheme.outlineVariant, // <-- follows theme
           width: 1,
         ),
       ),
+
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(AppStyles.paddingSmall),
             decoration: BoxDecoration(
-              color: AppStyles.primaryPurple.withOpacity(0.1),
+              color: colorScheme.primary.withOpacity(0.15), // <-- adaptive
               borderRadius: AppStyles.borderRadiusSmallAll,
             ),
             child: Icon(
               icon,
-              color: AppStyles.primaryPurple,
+              color: colorScheme.primary, // <-- adaptive
               size: AppStyles.iconSizeMedium,
             ),
           ),
+
           const SizedBox(width: AppStyles.paddingMedium),
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   label,
-                  style: AppStyles.labelSmall,
+                  style: textTheme.labelSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant, // <-- visible in dark
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   value,
-                  style: AppStyles.bodyLarge,
+                  style: textTheme.bodyLarge?.copyWith(
+                    color: colorScheme.onSurface, // <-- visible in dark
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -279,10 +278,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           backgroundColor: AppStyles.white,
           shape: RoundedRectangleBorder(
             borderRadius: AppStyles.borderRadiusMediumAll,
-            side: const BorderSide(
-              color: AppStyles.lightGray,
-              width: 1.5,
-            ),
+            side: const BorderSide(color: AppStyles.lightGray, width: 1.5),
           ),
           title: Row(
             children: [
@@ -300,10 +296,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(width: AppStyles.paddingMedium),
               const Expanded(
-                child: Text(
-                  'Log Out?',
-                  style: AppStyles.headingSmall,
-                ),
+                child: Text('Log Out?', style: AppStyles.headingSmall),
               ),
             ],
           ),
@@ -328,9 +321,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               },
               child: Text(
                 'Log Out',
-                style: AppStyles.labelLarge.copyWith(
-                  color: AppStyles.errorRed,
-                ),
+                style: AppStyles.labelLarge.copyWith(color: AppStyles.errorRed),
               ),
             ),
           ],

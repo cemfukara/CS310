@@ -31,7 +31,9 @@ class AppStyles {
 
   // Additional Colors
   static const Color accentPink = Color(0xFFEC4899); // Pink accent (alias)
-  static const Color dangerRed = Color(0xFFDC2626); // Darker red for critical actions
+  static const Color dangerRed = Color(
+    0xFFDC2626,
+  ); // Darker red for critical actions
 
   // ============================================================================
   // TEXT STYLES - Using Inter font family
@@ -151,14 +153,18 @@ class AppStyles {
   static const EdgeInsets edgeInsetXLarge = EdgeInsets.all(paddingXLarge);
 
   // Symmetric Edge Insets (Horizontal/Vertical)
-  static const EdgeInsets edgeInsetSymmetricHLarge =
-      EdgeInsets.symmetric(horizontal: paddingLarge);
-  static const EdgeInsets edgeInsetSymmetricHMedium =
-      EdgeInsets.symmetric(horizontal: paddingMedium);
-  static const EdgeInsets edgeInsetSymmetricVLarge =
-      EdgeInsets.symmetric(vertical: paddingLarge);
-  static const EdgeInsets edgeInsetSymmetricVMedium =
-      EdgeInsets.symmetric(vertical: paddingMedium);
+  static const EdgeInsets edgeInsetSymmetricHLarge = EdgeInsets.symmetric(
+    horizontal: paddingLarge,
+  );
+  static const EdgeInsets edgeInsetSymmetricHMedium = EdgeInsets.symmetric(
+    horizontal: paddingMedium,
+  );
+  static const EdgeInsets edgeInsetSymmetricVLarge = EdgeInsets.symmetric(
+    vertical: paddingLarge,
+  );
+  static const EdgeInsets edgeInsetSymmetricVMedium = EdgeInsets.symmetric(
+    vertical: paddingMedium,
+  );
 
   // ============================================================================
   // BORDER RADIUS CONSTANTS
@@ -169,14 +175,18 @@ class AppStyles {
   static const double borderRadiusLarge = 16.0;
   static const double borderRadiusXLarge = 24.0;
 
-  static const BorderRadius borderRadiusSmallAll =
-      BorderRadius.all(Radius.circular(borderRadiusSmall));
-  static const BorderRadius borderRadiusMediumAll =
-      BorderRadius.all(Radius.circular(borderRadiusMedium));
-  static const BorderRadius borderRadiusLargeAll =
-      BorderRadius.all(Radius.circular(borderRadiusLarge));
-  static const BorderRadius borderRadiusXLargeAll =
-      BorderRadius.all(Radius.circular(borderRadiusXLarge));
+  static const BorderRadius borderRadiusSmallAll = BorderRadius.all(
+    Radius.circular(borderRadiusSmall),
+  );
+  static const BorderRadius borderRadiusMediumAll = BorderRadius.all(
+    Radius.circular(borderRadiusMedium),
+  );
+  static const BorderRadius borderRadiusLargeAll = BorderRadius.all(
+    Radius.circular(borderRadiusLarge),
+  );
+  static const BorderRadius borderRadiusXLargeAll = BorderRadius.all(
+    Radius.circular(borderRadiusXLarge),
+  );
 
   // ============================================================================
   // BOX SHADOW CONSTANTS
@@ -264,10 +274,7 @@ class AppStyles {
   }
 
   /// Get font size based on screen width for responsive design
-  static double getResponsiveFontSize(
-    double baseSize,
-    double screenWidth,
-  ) {
+  static double getResponsiveFontSize(double baseSize, double screenWidth) {
     if (screenWidth < 600) {
       return baseSize * 0.9;
     } else if (screenWidth < 900) {
@@ -278,45 +285,61 @@ class AppStyles {
   }
 
   /// Build theme data for the app
-  static ThemeData buildAppTheme() {
+  static ThemeData buildAppTheme({required bool isDarkMode}) {
     return ThemeData(
       useMaterial3: true,
       fontFamily: fontFamily,
-      brightness: Brightness.light,
+      brightness: isDarkMode ? Brightness.dark : Brightness.light,
+
+      scaffoldBackgroundColor: isDarkMode ? darkBackground : white,
+
+      canvasColor: isDarkMode ? darkBackground : white,
+
+      cardColor: isDarkMode ? darkGray : white,
+
+      dialogBackgroundColor: isDarkMode ? darkGray : white,
+
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryPurple,
-        brightness: Brightness.light,
+        brightness: isDarkMode ? Brightness.dark : Brightness.light,
         primary: primaryPurple,
         secondary: accentPurple,
         tertiary: accentBlue,
-        surface: white,
-        surfaceContainerHighest: nearWhite,
+        surface: isDarkMode ? darkBackground : white,
+        surfaceContainerHighest: isDarkMode ? darkGray : nearWhite,
         error: errorRed,
       ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: primaryPurple,
+
+      appBarTheme: AppBarTheme(
+        backgroundColor: isDarkMode ? primaryPurpleDark : primaryPurple,
         foregroundColor: white,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: TextStyle(
+        titleTextStyle: const TextStyle(
           fontFamily: fontFamily,
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: white,
         ),
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: white,
+
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: isDarkMode ? darkBackground : white,
         selectedItemColor: primaryPurple,
         unselectedItemColor: mediumGray,
         elevation: 8.0,
         type: BottomNavigationBarType.fixed,
       ),
+
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: nearWhite,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: paddingMedium, vertical: 12),
+        fillColor: isDarkMode ? darkGray : nearWhite,
+
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: paddingMedium,
+          vertical: 12,
+        ),
+
         border: OutlineInputBorder(
           borderRadius: borderRadiusSmallAll,
           borderSide: const BorderSide(
@@ -331,86 +354,75 @@ class AppStyles {
             width: inputFieldBorderWidth,
           ),
         ),
-        focusedBorder: OutlineInputBorder(
+        focusedBorder: const OutlineInputBorder(
           borderRadius: borderRadiusSmallAll,
-          borderSide: const BorderSide(
+          borderSide: BorderSide(
             color: primaryPurple,
             width: inputFieldBorderWidth,
           ),
         ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: borderRadiusSmallAll,
-          borderSide: const BorderSide(
-            color: errorRed,
-            width: inputFieldBorderWidth,
-          ),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: borderRadiusSmallAll,
-          borderSide: const BorderSide(
-            color: errorRed,
-            width: inputFieldBorderWidth,
-          ),
-        ),
-        labelStyle: labelMedium,
-        hintStyle: bodySmall.copyWith(color: mediumGray),
-        errorStyle: errorText,
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primaryPurple,
-          foregroundColor: white,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(
-            horizontal: paddingLarge,
-            vertical: 12,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: borderRadiusSmallAll,
-          ),
-          textStyle: labelLarge.copyWith(color: white),
+
+        labelStyle: TextStyle(color: isDarkMode ? nearWhite : mediumGray),
+
+        hintStyle: TextStyle(color: isDarkMode ? mediumGray : mediumGray),
+
+        floatingLabelStyle: TextStyle(
+          color: isDarkMode ? primaryPurpleLight : primaryPurple,
         ),
       ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: primaryPurple,
-          side: const BorderSide(
-            color: primaryPurple,
-            width: 1.5,
-          ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: paddingLarge,
-            vertical: 12,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: borderRadiusSmallAll,
-          ),
-        ),
+
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: primaryPurple,
+        selectionColor: primaryPurpleLight.withOpacity(0.3),
+        selectionHandleColor: primaryPurple,
       ),
-      textTheme: TextTheme(
-        displayLarge: headingXLarge,
-        displayMedium: headingLarge,
-        displaySmall: headingMedium,
-        headlineMedium: headingSmall,
-        titleLarge: bodyLarge,
-        titleMedium: bodyMedium,
-        titleSmall: bodySmall,
-        bodyLarge: bodyLarge,
-        bodyMedium: bodyMedium,
-        bodySmall: bodySmall,
-        labelLarge: labelLarge,
-        labelMedium: labelMedium,
-        labelSmall: labelSmall,
-      ),
+
       cardTheme: CardThemeData(
-        color: white,
+        color: isDarkMode ? darkGray : white,
         elevation: cardElevation,
         shape: RoundedRectangleBorder(
           borderRadius: borderRadiusMediumAll,
-          side: const BorderSide(
-            color: lightGray,
-            width: cardBorderWidth,
-          ),
+          side: const BorderSide(color: lightGray, width: cardBorderWidth),
+        ),
+      ),
+
+      textTheme: TextTheme(
+        displayLarge: headingXLarge.copyWith(
+          color: isDarkMode ? white : primaryPurpleDark,
+        ),
+        displayMedium: headingLarge.copyWith(
+          color: isDarkMode ? white : primaryPurpleDark,
+        ),
+        displaySmall: headingMedium.copyWith(
+          color: isDarkMode ? white : primaryPurpleDark,
+        ),
+        headlineMedium: headingSmall.copyWith(
+          color: isDarkMode ? white : primaryPurpleDark,
+        ),
+
+        titleLarge: bodyLarge.copyWith(
+          color: isDarkMode ? nearWhite : darkGray,
+        ),
+        titleMedium: bodyMedium.copyWith(
+          color: isDarkMode ? nearWhite : darkGray,
+        ),
+        titleSmall: bodySmall.copyWith(
+          color: isDarkMode ? mediumGray : mediumGray,
+        ),
+
+        bodyLarge: bodyLarge.copyWith(color: isDarkMode ? nearWhite : darkGray),
+        bodyMedium: bodyMedium.copyWith(
+          color: isDarkMode ? nearWhite : darkGray,
+        ),
+        bodySmall: bodySmall.copyWith(
+          color: isDarkMode ? mediumGray : mediumGray,
+        ),
+
+        labelLarge: labelLarge.copyWith(
+          color: isDarkMode ? primaryPurpleLight : primaryPurple,
+        ),
+        labelMedium: labelMedium.copyWith(
+          color: isDarkMode ? primaryPurpleLight : primaryPurple,
         ),
       ),
     );

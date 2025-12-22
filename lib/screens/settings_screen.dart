@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../utils/app_styles.dart';
+import 'package:provider/provider.dart';
+import 'package:promise/providers/theme_provider.dart';
 
 /// Settings Screen - App configuration and preferences
 class SettingsScreen extends StatefulWidget {
@@ -12,19 +14,16 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
   bool _emailDigest = true;
-  bool _darkMode = false;
   String _selectedLanguage = 'English';
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 600;
+    final themeProvider = Provider.of<ThemeProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Settings'), centerTitle: true),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(
           isSmallScreen ? AppStyles.paddingMedium : AppStyles.paddingLarge,
@@ -84,9 +83,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildSwitchTile(
               title: 'Dark Mode',
               subtitle: 'Use dark theme',
-              value: _darkMode,
+              value: themeProvider.isDark,
               onChanged: (value) {
-                setState(() => _darkMode = value);
+                themeProvider.toggleTheme();
               },
               icon: Icons.dark_mode,
             ),
@@ -214,10 +213,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         trailing: DropdownButton<String>(
           value: value,
           items: items.map((item) {
-            return DropdownMenuItem(
-              value: item,
-              child: Text(item),
-            );
+            return DropdownMenuItem(value: item, child: Text(item));
           }).toList(),
           onChanged: (newValue) {
             if (newValue != null) {
@@ -417,9 +413,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('All data cleared')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('All data cleared')));
               Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
