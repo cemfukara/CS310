@@ -5,6 +5,7 @@ import '../providers/friends_provider.dart';
 import '../models/user_model.dart';
 import '../models/promise_request_model.dart';
 import '../services/database_service.dart';
+import '../providers/promise_provider.dart'; // Import PromiseProvider
 
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
@@ -69,40 +70,40 @@ class _FriendsScreenState extends State<FriendsScreen>
                 onPressed: isSearching
                     ? null
                     : () async {
-                        if (emailController.text.isEmpty) return;
+                  if (emailController.text.isEmpty) return;
 
-                        setState(() => isSearching = true);
+                  setState(() => isSearching = true);
 
-                        final provider = Provider.of<FriendsProvider>(
-                          context,
-                          listen: false,
-                        );
+                  final provider = Provider.of<FriendsProvider>(
+                    context,
+                    listen: false,
+                  );
 
-                        final error = await provider.sendRequest(
-                          emailController.text,
-                        );
+                  final error = await provider.sendRequest(
+                    emailController.text,
+                  );
 
-                        if (mounted) {
-                          setState(() => isSearching = false);
-                          Navigator.pop(context);
+                  if (mounted) {
+                    setState(() => isSearching = false);
+                    Navigator.pop(context);
 
-                          if (error == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Friend request sent!'),
-                                backgroundColor: AppStyles.successGreen,
-                              ),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(error),
-                                backgroundColor: AppStyles.errorRed,
-                              ),
-                            );
-                          }
-                        }
-                      },
+                    if (error == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Friend request sent!'),
+                          backgroundColor: AppStyles.successGreen,
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(error),
+                          backgroundColor: AppStyles.errorRed,
+                        ),
+                      );
+                    }
+                  }
+                },
                 child: const Text('Send Request'),
               ),
             ],
@@ -207,13 +208,29 @@ class _FriendsScreenState extends State<FriendsScreen>
       appBar: AppBar(
         title: const Text('Friends'),
         centerTitle: true,
+        // --- ADDED ACTIONS ---
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            onPressed: () => Navigator.pushNamed(context, '/profile'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () async {
+              await Navigator.pushNamed(context, '/new-promise');
+              // Ensure we reload promise provider if a promise was created
+              if (mounted) {
+                Provider.of<PromiseProvider>(context, listen: false).reload();
+              }
+            },
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppStyles.white,
           labelColor: AppStyles.white,
           unselectedLabelColor: Colors.white70,
           tabs: [
-            // FRIEND COUNT TAB
             StreamBuilder<List<UserModel>>(
               stream: provider.friendsStream,
               builder: (_, snapshot) {
@@ -221,8 +238,6 @@ class _FriendsScreenState extends State<FriendsScreen>
                 return Tab(text: 'My Friends ($count)');
               },
             ),
-
-            // REQUEST COUNT TAB
             StreamBuilder<List<UserModel>>(
               stream: provider.requestsStream,
               builder: (_, snapshot) {

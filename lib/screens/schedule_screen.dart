@@ -44,9 +44,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Widget _buildEventItem(PromiseModel promise) {
-    // Model getter endTime calculates start + duration automatically
     final timeStr = '${DateFormat('HH:mm').format(promise.startTime)} - ${DateFormat('HH:mm').format(promise.endTime)}';
-
     final color = promise.isCompleted ? AppStyles.successGreen : AppStyles.primaryPurple;
 
     return Card(
@@ -137,7 +135,26 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         dailyEvents.sort((a, b) => a.startTime.hour.compareTo(b.startTime.hour));
 
         return Scaffold(
-          appBar: AppBar(title: const Text('Schedule'), centerTitle: true),
+          appBar: AppBar(
+            title: const Text('Schedule'),
+            centerTitle: true,
+            // --- ADDED ACTIONS ---
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.person_outline),
+                onPressed: () => Navigator.pushNamed(context, '/profile'),
+              ),
+              IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: () async {
+                  await Navigator.pushNamed(context, '/new-promise');
+                  if (mounted) {
+                    Provider.of<PromiseProvider>(context, listen: false).reload();
+                  }
+                },
+              ),
+            ],
+          ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(AppStyles.paddingMedium),
             child: Column(

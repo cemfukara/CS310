@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Import Provider
-import '../providers/promise_provider.dart'; // Import PromiseProvider
+import 'package:provider/provider.dart';
+import '../providers/promise_provider.dart';
 import '../models/promise_model.dart';
 import '../utils/app_styles.dart';
 import 'schedule_screen.dart';
@@ -61,10 +61,8 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     );
   }
 
-  // --- DELETE FUNCTION ---
   void _deletePromise(BuildContext context, String promiseId) async {
     try {
-      // Call the provider to delete from Firebase
       await Provider.of<PromiseProvider>(
         context,
         listen: false,
@@ -91,80 +89,102 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     }
   }
 
-  // --- HOME TAB (REAL DATA + REFRESH) ---
+  // --- HOME TAB WRAPPED IN SCAFFOLD ---
   Widget _buildHomeTab(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 600;
 
-    return Consumer<PromiseProvider>(
-      builder: (context, promiseProvider, child) {
-        // 1. Check Loading State
-        if (promiseProvider.isLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final promises = promiseProvider.promises
-            .where((p) => !p.isCompleted)
-            .toList();
-
-        // 2. Wrap in RefreshIndicator for Pull-to-Refresh
-        return RefreshIndicator(
-          onRefresh: () async {
-            await promiseProvider.reload();
-          },
-          child: SingleChildScrollView(
-            // AlwaysScrollableScrollPhysics ensures pull-to-refresh works even if list is short
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.all(
-              isSmallScreen ? AppStyles.paddingMedium : AppStyles.paddingLarge,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Header
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: AppStyles.paddingMedium,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text('Today\'s Promises', style: AppStyles.headingLarge),
-                      const SizedBox(height: AppStyles.paddingSmall),
-                      Text(
-                        '${promises.length} commitments total',
-                        style: AppStyles.bodyMedium,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppStyles.paddingLarge),
-
-                // Profile Card (Now acts as a Stat Summary / Welcome)
-                _buildWelcomeCard(context, isSmallScreen),
-                const SizedBox(height: AppStyles.paddingLarge),
-
-                // Gamification Quick Access (Store & Achievements)
-                _buildGamificationRow(),
-                const SizedBox(height: AppStyles.paddingXLarge),
-
-                // Promises List (Real Data)
-                if (promises.isEmpty)
-                  _buildEmptyState()
-                else
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: promises.length,
-                    itemBuilder: (context, index) {
-                      return _buildPromiseCard(context, promises[index]);
-                    },
-                  ),
-              ],
-            ),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Home'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            onPressed: _navigateToProfile,
           ),
-        );
-      },
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () async {
+              await Navigator.pushNamed(context, '/new-promise');
+              if (mounted) {
+                Provider.of<PromiseProvider>(context, listen: false).reload();
+              }
+            },
+          ),
+        ],
+      ),
+      body: Consumer<PromiseProvider>(
+        builder: (context, promiseProvider, child) {
+          if (promiseProvider.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final promises = promiseProvider.promises
+              .where((p) => !p.isCompleted)
+              .toList();
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              await promiseProvider.reload();
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.all(
+                isSmallScreen
+                    ? AppStyles.paddingMedium
+                    : AppStyles.paddingLarge,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppStyles.paddingMedium,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'Today\'s Promises',
+                          style: AppStyles.headingLarge,
+                        ),
+                        const SizedBox(height: AppStyles.paddingSmall),
+                        Text(
+                          '${promises.length} commitments total',
+                          style: AppStyles.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppStyles.paddingLarge),
+
+                  // Welcome / Stats
+                  _buildWelcomeCard(context, isSmallScreen),
+                  const SizedBox(height: AppStyles.paddingLarge),
+
+                  // Gamification
+                  _buildGamificationRow(),
+                  const SizedBox(height: AppStyles.paddingXLarge),
+
+                  // Promises List
+                  if (promises.isEmpty)
+                    _buildEmptyState()
+                  else
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: promises.length,
+                      itemBuilder: (context, index) {
+                        return _buildPromiseCard(context, promises[index]);
+                      },
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -296,7 +316,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   Widget _buildPromiseCard(BuildContext context, PromiseModel promise) {
     Color priorityColor;
     if (promise.isCompleted) {
-      priorityColor = Colors.green[800]!; // Dark Green for completed
+      priorityColor = Colors.green[800]!;
     } else if (promise.priority >= 5) {
       priorityColor = AppStyles.errorRed;
     } else if (promise.priority == 4) {
@@ -362,7 +382,6 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Only 4 main tabs now
     final List<Widget> pages = [
       _buildHomeTab(context),
       const ScheduleScreen(),
@@ -371,25 +390,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Promise'),
-        actions: [
-          // Profile relocated to AppBar
-          IconButton(
-            icon: const Icon(Icons.person_outline),
-            onPressed: _navigateToProfile,
-          ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () async {
-              await Navigator.pushNamed(context, '/new-promise');
-              if (mounted) {
-                Provider.of<PromiseProvider>(context, listen: false).reload();
-              }
-            },
-          ),
-        ],
-      ),
+      // --- NO GLOBAL APP BAR HERE ---
       body: pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
