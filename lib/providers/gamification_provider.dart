@@ -3,7 +3,7 @@ import '../models/user_stats_model.dart';
 import '../services/database_service.dart';
 
 class GamificationProvider extends ChangeNotifier {
-  DatabaseService _db; // Fix: Removed final
+  final DatabaseService _db;
   UserStatsModel _stats = UserStatsModel();
   bool _isLoading = true;
 
@@ -14,11 +14,6 @@ class GamificationProvider extends ChangeNotifier {
     _init();
   }
 
-  // --- FIX: Setter for ProxyProvider ---
-  void update(DatabaseService newDb) {
-    _db = newDb;
-  }
-
   void _init() {
     _db.getUserStatsStream().listen((stats) {
       _stats = stats;
@@ -27,13 +22,17 @@ class GamificationProvider extends ChangeNotifier {
     });
   }
 
+  // --- ACTIONS ---
+
   Future<bool> buyItem(String itemId, int price) async {
     if (_stats.coins >= price) {
+      // 1. Deduct coins
       await _db.updateCoins(-price);
+      // 2. Add to inventory
       await _db.unlockItem(itemId);
-      return true;
+      return true; // Success
     } else {
-      return false;
+      return false; // Not enough money
     }
   }
 
@@ -45,6 +44,7 @@ class GamificationProvider extends ChangeNotifier {
     return _stats.achievements.contains(achievementId);
   }
 
+  // Debug/Dev helper
   Future<void> addFreeCoins(int amount) async {
     await _db.updateCoins(amount);
   }
