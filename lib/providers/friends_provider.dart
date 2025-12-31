@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
 import '../services/database_service.dart';
-import 'auth_provider.dart';
 
 class FriendsProvider with ChangeNotifier {
-  AuthProvider _authProvider; // Fix: Inject AuthProvider
-  DatabaseService _db; // Fix: Inject DatabaseService
+  final DatabaseService _db;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   List<UserModel> _friends = [];
   List<UserModel> _requests = [];
@@ -15,15 +15,7 @@ class FriendsProvider with ChangeNotifier {
   StreamSubscription? _friendsSub;
   StreamSubscription? _requestsSub;
 
-  FriendsProvider(this._authProvider, this._db) {
-    _initStreams();
-  }
-
-  // --- FIX: Setter for ProxyProvider ---
-  void update(AuthProvider auth, DatabaseService db) {
-    _authProvider = auth;
-    _db = db;
-    // We re-init streams in case the user logged in/out
+  FriendsProvider(this._db) {
     _initStreams();
   }
 
@@ -32,71 +24,55 @@ class FriendsProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
 
   void _initStreams() {
-    // Fix: Get user from injected provider, not FirebaseAuth directly
-    final user = _authProvider.user;
+    _isLoading = true;
+    notifyListeners();
 
     _friendsSub?.cancel();
-    _requestsSub?.cancel();
-
-    if (user == null) {
-      _friends = [];
-      _requests = [];
-      notifyListeners();
-      return;
-    }
-
-    _isLoading = true;
-    // Use Future.microtask to avoid "notifyListeners during build" error
-    Future.microtask(() => notifyListeners());
-
     _friendsSub = _db.getFriendsStream().listen((data) {
       _friends = data;
       _isLoading = false;
       notifyListeners();
     });
 
+    _requestsSub?.cancel();
     _requestsSub = _db.getFriendRequestsStream().listen((data) {
       _requests = data;
       notifyListeners();
     });
   }
 
+  // --- ACTIONS ---
+
   Future<String?> sendRequest(String email) async {
     try {
-      final currentUser = _authProvider.user; // Fix: Use injected user
+      final currentUser = _auth.currentUser;
       if (currentUser == null) return "Not logged in";
-
-      // Fix: Check if adding self by email
-      if (email.trim().toLowerCase() == currentUser.email?.toLowerCase()) {
+      if (email.trim().toLowerCase() == currentUser.email?.toLowerCase())
         return "You cannot add yourself";
-      }
 
+      // 1. Search for user
       final targetUser = await _db.searchUserByEmail(email.trim());
       if (targetUser == null) return "User not found";
 
-      // Fix: Check if adding self by UID (double check)
-      if (targetUser.uid == currentUser.uid) {
-        return "You cannot add yourself";
-      }
-
-      if (_friends.any((f) => f.uid == targetUser.uid)) {
+      // 2. Check if already friends (simple check)
+      if (_friends.any((f) => f.uid == targetUser.uid))
         return "Already friends";
-      }
 
+      // 3. Send Request
       await _db.sendFriendRequest(
         currentUser.uid,
         currentUser.displayName ?? 'Unknown',
         currentUser.email ?? '',
         targetUser.uid,
       );
-      return null;
+      return null; // Success
     } catch (e) {
       return "Error: $e";
     }
   }
 
   Future<void> acceptRequest(UserModel request) async {
-    final currentUser = _authProvider.user;
+    final currentUser = _auth.currentUser;
     if (currentUser == null) return;
 
     await _db.acceptFriendRequest(
@@ -110,9 +86,8 @@ class FriendsProvider with ChangeNotifier {
   }
 
   Future<void> declineRequest(String requestUid) async {
-    final currentUser = _authProvider.user;
+    final currentUser = _auth.currentUser;
     if (currentUser == null) return;
-
     await _db.declineFriendRequest(currentUser.uid, requestUid);
   }
 

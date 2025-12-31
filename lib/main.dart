@@ -5,13 +5,14 @@ import 'package:provider/provider.dart';
 // Providers
 import 'package:promise/providers/auth_provider.dart';
 import 'package:promise/providers/promise_provider.dart';
-import 'package:promise/providers/theme_provider.dart';
-import 'package:promise/providers/friends_provider.dart';
-import 'package:promise/providers/gamification_provider.dart';
+import 'package:promise/providers/theme_provider.dart'; // Kept your ThemeProvider
+// import if needed
+import 'package:promise/providers/friends_provider.dart'; // IMPORT THIS
 
 // Services
 import 'package:promise/services/database_service.dart';
 import 'package:promise/services/firestore_service.dart';
+import 'package:promise/providers/gamification_provider.dart'; // IMPORT THIS
 
 // Screens
 import 'package:promise/screens/home_dashboard_screen.dart';
@@ -26,62 +27,56 @@ import 'package:promise/utils/app_styles.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-
   runApp(
     MultiProvider(
       providers: [
-        // 1. Independent Providers
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
-
-        // 2. Services (Injected as a standard Provider, not ChangeNotifier)
-        Provider<DatabaseService>(create: (_) => FirestoreService()),
-
-        // 3. Dependent Providers (Using ProxyProvider CORRECTLY)
-
-        // Fix: PromiseProvider depends on DatabaseService
+        ProxyProvider<AuthProvider, DatabaseService>(
+          update: (_, auth, __) => FirestoreService(),
+        ),
         ChangeNotifierProxyProvider<DatabaseService, PromiseProvider>(
-          create: (context) => PromiseProvider(context.read<DatabaseService>()),
-          update: (_, db, previous) => previous!..update(db),
-        ),
-
-        // Fix: GamificationProvider depends on DatabaseService
-        ChangeNotifierProxyProvider<DatabaseService, GamificationProvider>(
-          create: (context) =>
-              GamificationProvider(context.read<DatabaseService>()),
-          update: (_, db, previous) => previous!..update(db),
-        ),
-
-        // Fix: FriendsProvider depends on AuthProvider AND DatabaseService
-        ChangeNotifierProxyProvider2<
-          AuthProvider,
-          DatabaseService,
-          FriendsProvider
-        >(
-          create: (context) => FriendsProvider(
-            context.read<AuthProvider>(),
-            context.read<DatabaseService>(),
+          create: (context) => PromiseProvider(
+            Provider.of<DatabaseService>(context, listen: false),
           ),
-          update: (_, auth, db, previous) => previous!..update(auth, db),
+          update: (_, db, __) => PromiseProvider(db),
         ),
+        // --- ADD THIS BLOCK ---
+        ChangeNotifierProxyProvider<DatabaseService, FriendsProvider>(
+          create: (context) => FriendsProvider(
+            Provider.of<DatabaseService>(context, listen: false),
+          ),
+          update: (_, db, __) => FriendsProvider(db),
+        ),
+        // ---------------------
+        ChangeNotifierProxyProvider<DatabaseService, GamificationProvider>(
+          create: (context) => GamificationProvider(
+            Provider.of<DatabaseService>(context, listen: false),
+          ),
+          update: (_, db, __) => GamificationProvider(db),
+        ),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
-      child: const MyApp(),
+      child: const PromiseApp(),
     ),
   );
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class PromiseApp extends StatelessWidget {
+  const PromiseApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Promise',
+      // Using your ThemeProvider logic
       theme: AppStyles.buildAppTheme(
         isDarkMode: Provider.of<ThemeProvider>(context).isDark,
       ),
       debugShowCheckedModeBanner: false,
       home: const AuthWrapper(),
+
+      // --- THE FIX: ROUTES UNCOMMENTED ---
+      // These must be active for Navigator.pushNamed(context, '/new-promise') to work
       routes: {
         '/login': (context) => const LoginScreen(),
         '/signup': (context) => const SignUpScreen(),
@@ -107,6 +102,7 @@ class AuthWrapper extends StatelessWidget {
     }
 
     if (authProvider.isAuthenticated) {
+      // Correctly points to HomeDashboardScreen, which handles the BottomNavBar
       return const HomeDashboardScreen();
     } else {
       return const LoginScreen();
