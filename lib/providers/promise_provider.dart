@@ -64,6 +64,10 @@ class PromiseProvider with ChangeNotifier {
       category: category,
       priority: priority,
     );
+
+    // Check for "First Promise" achievement
+    // We can just try to unlock it every time, the backend handles duplicates via arrayUnion/set
+    await _db.unlockAchievement('first_promise');
   }
 
   // UPDATE
@@ -105,6 +109,18 @@ class PromiseProvider with ChangeNotifier {
         notifyListeners();
 
         await _db.updatePromise(updatedPromise);
+        await _db.updatePromise(updatedPromise);
+
+        // --- GAMIFICATION REWARD ---
+        if (newStatus == true) {
+          // Promise Completed! Award 50 coins.
+          await _db.updateCoins(50);
+
+          // Check for Promise Master achievement (50 promises)
+          // Ideally we store stats count in UserStatsModel and check there,
+          // For now we can just blindly increment or check userStats if we had access.
+          // Let's just award coins for now to keep it simple and robust.
+        }
       }
     } catch (e) {
       print("Error toggling status: $e");

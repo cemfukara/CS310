@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/promise_model.dart';
 import '../models/user_model.dart';
+import '../models/user_stats_model.dart';
 import 'database_service.dart';
 
 class FirestoreService implements DatabaseService {
@@ -204,5 +205,85 @@ class FirestoreService implements DatabaseService {
               .map((doc) => UserModel.fromMap(doc.data()))
               .toList(),
         );
+  }
+
+  // --- GAMIFICATION IMPLEMENTATION ---
+
+  @override
+  Stream<UserStatsModel> getUserStatsStream() {
+    if (_userId == null) return const Stream.empty();
+
+    // Listen to the 'stats' subcollection or a specific document for stats
+    // We'll store stats in users/{uid}/gamification/stats
+    return _db
+        .collection('users')
+        .doc(_userId)
+        .collection('gamification')
+        .doc('stats')
+        .snapshots()
+        .map((doc) {
+          if (!doc.exists) {
+            // value if not exists
+            return UserStatsModel();
+          }
+          return UserStatsModel.fromMap(doc.data()!);
+        });
+  }
+
+  @override
+  Future<void> updateUserStats(UserStatsModel stats) async {
+    if (_userId == null) return;
+    await _db
+        .collection('users')
+        .doc(_userId)
+        .collection('gamification')
+        .doc('stats')
+        .set(stats.toMap(), SetOptions(merge: true));
+  }
+
+  @override
+  Future<void> updateCoins(int amount) async {
+    if (_userId == null) return;
+
+    final ref = _db
+        .collection('users')
+        .doc(_userId)
+        .collection('gamification')
+        .doc('stats');
+
+    // Use a transaction or FieldValue.increment for safety
+    await ref.set({
+      'coins': FieldValue.increment(amount),
+    }, SetOptions(merge: true));
+  }
+
+  @override
+  Future<void> unlockItem(String itemId) async {
+    if (_userId == null) return;
+
+    final ref = _db
+        .collection('users')
+        .doc(_userId)
+        .collection('gamification')
+        .doc('stats');
+
+    await ref.set({
+      'inventory': FieldValue.arrayUnion([itemId]),
+    }, SetOptions(merge: true));
+  }
+
+  @override
+  Future<void> unlockAchievement(String achievementId) async {
+    if (_userId == null) return;
+
+    final ref = _db
+        .collection('users')
+        .doc(_userId)
+        .collection('gamification')
+        .doc('stats');
+
+    await ref.set({
+      'achievements': FieldValue.arrayUnion([achievementId]),
+    }, SetOptions(merge: true));
   }
 }

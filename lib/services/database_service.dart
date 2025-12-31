@@ -1,5 +1,6 @@
 import '../models/promise_model.dart';
-import '../models/user_model.dart'; // Import the new model
+import '../models/user_model.dart';
+import '../models/user_stats_model.dart'; // Import the new stats model
 
 abstract class DatabaseService {
   // --- PROMISE METHODS (EXISTING) ---
@@ -45,4 +46,11 @@ abstract class DatabaseService {
   // 4. Streams
   Stream<List<UserModel>> getFriendRequestsStream();
   Stream<List<UserModel>> getFriendsStream();
+
+  // --- GAMIFICATION ONE-TIME METHODS (NEW) ---
+  Stream<UserStatsModel> getUserStatsStream();
+  Future<void> updateUserStats(UserStatsModel stats);
+  Future<void> updateCoins(int amount); // Positive to add, negative to subtract
+  Future<void> unlockItem(String itemId);
+  Future<void> unlockAchievement(String achievementId);
 }

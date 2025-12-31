@@ -12,6 +12,7 @@ import 'package:promise/providers/friends_provider.dart'; // IMPORT THIS
 // Services
 import 'package:promise/services/database_service.dart';
 import 'package:promise/services/firestore_service.dart';
+import 'package:promise/providers/gamification_provider.dart'; // IMPORT THIS
 
 // Screens
 import 'package:promise/screens/home_dashboard_screen.dart';
@@ -47,6 +48,12 @@ void main() async {
           update: (_, db, __) => FriendsProvider(db),
         ),
         // ---------------------
+        ChangeNotifierProxyProvider<DatabaseService, GamificationProvider>(
+          create: (context) => GamificationProvider(
+            Provider.of<DatabaseService>(context, listen: false),
+          ),
+          update: (_, db, __) => GamificationProvider(db),
+        ),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
       child: const PromiseApp(),

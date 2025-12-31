@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../utils/app_styles.dart';
+import '../providers/gamification_provider.dart';
 
 /// Achievements Screen - Display user achievements and progress
 class AchievementsScreen extends StatefulWidget {
@@ -12,75 +14,59 @@ class AchievementsScreen extends StatefulWidget {
 class _AchievementsScreenState extends State<AchievementsScreen> {
   final List<Map<String, dynamic>> _achievements = [
     {
+      'id': 'first_promise',
       'name': 'First Promise',
       'description': 'Create your first promise',
       'icon': Icons.flag,
-      'unlocked': true,
-      'unlockedDate': '2025-01-15',
-      'progress': 1,
       'target': 1,
     },
     {
+      'id': 'promise_master',
       'name': 'Promise Master',
       'description': 'Complete 50 promises',
       'icon': Icons.military_tech,
-      'unlocked': true,
-      'unlockedDate': '2025-11-10',
-      'progress': 50,
       'target': 50,
     },
     {
+      'id': 'week_warrior',
       'name': 'Week Warrior',
       'description': 'Maintain a 7-day streak',
       'icon': Icons.whatshot,
-      'unlocked': true,
-      'unlockedDate': '2025-11-15',
-      'progress': 7,
       'target': 7,
     },
     {
+      'id': 'consistency_king',
       'name': 'Consistency King',
       'description': 'Maintain a 30-day streak',
       'icon': Icons.star,
-      'unlocked': false,
-      'unlockedDate': null,
-      'progress': 18,
       'target': 30,
     },
     {
+      'id': 'social_butterfly',
       'name': 'Social Butterfly',
       'description': 'Have 10 friends',
       'icon': Icons.group,
-      'unlocked': false,
-      'unlockedDate': null,
-      'progress': 6,
       'target': 10,
     },
     {
+      'id': 'collector',
       'name': 'Collector',
       'description': 'Collect 20 badges',
       'icon': Icons.card_giftcard,
-      'unlocked': false,
-      'unlockedDate': null,
-      'progress': 8,
       'target': 20,
     },
     {
+      'id': 'perfect_day',
       'name': 'Perfect Day',
       'description': 'Complete all promises in one day',
       'icon': Icons.calendar_today,
-      'unlocked': true,
-      'unlockedDate': '2025-11-20',
-      'progress': 1,
       'target': 1,
     },
     {
+      'id': 'century_club',
       'name': 'Century Club',
       'description': 'Complete 100 promises',
       'icon': Icons.workspace_premium,
-      'unlocked': false,
-      'unlockedDate': null,
-      'progress': 50,
       'target': 100,
     },
   ];
@@ -89,138 +75,150 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isSmallScreen = screenWidth < 600;
+    return Consumer<GamificationProvider>(
+      builder: (context, provider, child) {
+        // Calculate dynamic stats based on provider data
+        int unlockedCount = 0;
+        for (var a in _achievements) {
+          if (provider.hasAchievement(a['id'])) {
+            unlockedCount++;
+          }
+        }
 
-    final unlockedCount = _achievements
-        .where((a) => a['unlocked'] == true)
-        .length;
-    final totalCount = _achievements.length;
-    final completionPercentage = ((unlockedCount / totalCount) * 100).toInt();
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isSmallScreen = screenWidth < 600;
+        final totalCount = _achievements.length;
+        final completionPercentage = totalCount > 0
+            ? ((unlockedCount / totalCount) * 100).toInt()
+            : 0;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Achievements'), centerTitle: true),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(
-          isSmallScreen ? AppStyles.paddingMedium : AppStyles.paddingLarge,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Progress Card
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(AppStyles.paddingLarge),
-                child: Column(
-                  children: [
-                    Text('Overall Progress', style: AppStyles.headingSmall),
-                    const SizedBox(height: AppStyles.paddingMedium),
-                    Stack(
-                      alignment: Alignment.center,
+        return Scaffold(
+          appBar: AppBar(title: const Text('Achievements'), centerTitle: true),
+          body: SingleChildScrollView(
+            padding: EdgeInsets.all(
+              isSmallScreen ? AppStyles.paddingMedium : AppStyles.paddingLarge,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Progress Card
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppStyles.paddingLarge),
+                    child: Column(
                       children: [
-                        SizedBox(
-                          width: 150,
-                          height: 150,
-                          child: CircularProgressIndicator(
-                            value: unlockedCount / totalCount,
-                            strokeWidth: 8,
-                            backgroundColor: AppStyles.nearWhite,
-                            valueColor: AlwaysStoppedAnimation(
-                              AppStyles.primaryPurple,
-                            ),
-                          ),
-                        ),
-                        Column(
+                        Text('Overall Progress', style: AppStyles.headingSmall),
+                        const SizedBox(height: AppStyles.paddingMedium),
+                        Stack(
+                          alignment: Alignment.center,
                           children: [
-                            Text(
-                              '$unlockedCount/$totalCount',
-                              style: AppStyles.headingSmall,
-                            ),
-                            Text(
-                              '$completionPercentage%',
-                              style: AppStyles.labelMedium.copyWith(
-                                color: AppStyles.darkGray,
+                            SizedBox(
+                              width: 150,
+                              height: 150,
+                              child: CircularProgressIndicator(
+                                value: unlockedCount / totalCount,
+                                strokeWidth: 8,
+                                backgroundColor: AppStyles.nearWhite,
+                                valueColor: AlwaysStoppedAnimation(
+                                  AppStyles.primaryPurple,
+                                ),
                               ),
                             ),
+                            Column(
+                              children: [
+                                Text(
+                                  '$unlockedCount/$totalCount',
+                                  style: AppStyles.headingSmall,
+                                ),
+                                Text(
+                                  '$completionPercentage%',
+                                  style: AppStyles.labelMedium.copyWith(
+                                    color: AppStyles.darkGray,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppStyles.paddingLarge),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            Column(
+                              children: [
+                                Text('Unlocked', style: AppStyles.labelMedium),
+                                Text(
+                                  '$unlockedCount',
+                                  style: AppStyles.headingMedium,
+                                ),
+                              ],
+                            ),
+                            Column(
+                              children: [
+                                Text('Locked', style: AppStyles.labelMedium),
+                                Text(
+                                  '${totalCount - unlockedCount}',
+                                  style: AppStyles.headingMedium,
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ],
                     ),
-                    const SizedBox(height: AppStyles.paddingLarge),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        Column(
-                          children: [
-                            Text('Unlocked', style: AppStyles.labelMedium),
-                            Text(
-                              '$unlockedCount',
-                              style: AppStyles.headingMedium,
-                            ),
-                          ],
-                        ),
-                        Column(
-                          children: [
-                            Text('Locked', style: AppStyles.labelMedium),
-                            Text(
-                              '${totalCount - unlockedCount}',
-                              style: AppStyles.headingMedium,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: AppStyles.paddingLarge),
+                const SizedBox(height: AppStyles.paddingLarge),
 
-            // Filter Tabs
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: ['All', 'Unlocked', 'Locked'].map((filter) {
-                final isSelected = filter == _selectedFilter;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppStyles.paddingSmall,
-                  ),
-                  child: ChoiceChip(
-                    label: Text(filter),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      setState(() {
-                        _selectedFilter = filter;
-                      });
-                    },
-                    selectedColor: AppStyles.primaryPurple,
-                    labelStyle: AppStyles.labelMedium.copyWith(
-                      color: isSelected ? AppStyles.white : AppStyles.darkGray,
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: AppStyles.paddingLarge),
+                // Filter Tabs
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: ['All', 'Unlocked', 'Locked'].map((filter) {
+                    final isSelected = filter == _selectedFilter;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppStyles.paddingSmall,
+                      ),
+                      child: ChoiceChip(
+                        label: Text(filter),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          setState(() {
+                            _selectedFilter = filter;
+                          });
+                        },
+                        selectedColor: AppStyles.primaryPurple,
+                        labelStyle: AppStyles.labelMedium.copyWith(
+                          color: isSelected
+                              ? AppStyles.white
+                              : AppStyles.darkGray,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: AppStyles.paddingLarge),
 
-            // Achievements List
-            ..._buildAchievementsList(),
-          ],
-        ),
-      ),
+                // Achievements List
+                ..._buildAchievementsList(provider),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  List<Widget> _buildAchievementsList() {
+  List<Widget> _buildAchievementsList(GamificationProvider provider) {
     List<Map<String, dynamic>> filteredAchievements;
 
     if (_selectedFilter == 'Unlocked') {
       filteredAchievements = _achievements
-          .where((a) => a['unlocked'] == true)
+          .where((a) => provider.hasAchievement(a['id']))
           .toList();
     } else if (_selectedFilter == 'Locked') {
       filteredAchievements = _achievements
-          .where((a) => a['unlocked'] == false)
+          .where((a) => !provider.hasAchievement(a['id']))
           .toList();
     } else {
       filteredAchievements = _achievements;
@@ -243,15 +241,16 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     }
 
     return filteredAchievements.map((achievement) {
-      final isUnlocked = achievement['unlocked'] as bool;
-      final progress = achievement['progress'] as int;
+      final isUnlocked = provider.hasAchievement(achievement['id']);
+      // For now, we mock progress for locked items since we don't store individual progress yet
+      final progress = isUnlocked ? achievement['target'] as int : 0;
       final target = achievement['target'] as int;
       final progressPercent = (progress / target).clamp(0.0, 1.0);
 
       return Padding(
         padding: const EdgeInsets.only(bottom: AppStyles.paddingMedium),
         child: GestureDetector(
-          onTap: () => _showAchievementDetails(achievement),
+          onTap: () => _showAchievementDetails(achievement, isUnlocked),
           child: Card(
             child: Padding(
               padding: const EdgeInsets.all(AppStyles.paddingMedium),
@@ -371,7 +370,14 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     }).toList();
   }
 
-  void _showAchievementDetails(Map<String, dynamic> achievement) {
+  void _showAchievementDetails(
+    Map<String, dynamic> achievement,
+    bool isUnlocked,
+  ) {
+    // For manual showDialog calls, we just reuse the calculated isUnlocked
+    int progress = isUnlocked ? achievement['target'] : 0;
+    int target = achievement['target'];
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -384,7 +390,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
               child: Icon(
                 achievement['icon'],
                 size: 64,
-                color: achievement['unlocked']
+                color: isUnlocked
                     ? AppStyles.primaryPurple
                     : AppStyles.mediumGray,
               ),
@@ -398,26 +404,18 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
             ClipRRect(
               borderRadius: AppStyles.borderRadiusSmallAll,
               child: LinearProgressIndicator(
-                value: (achievement['progress'] / achievement['target']).clamp(
-                  0.0,
-                  1.0,
-                ),
+                value: (progress / target).clamp(0.0, 1.0),
                 minHeight: 8,
                 backgroundColor: AppStyles.nearWhite,
                 valueColor: AlwaysStoppedAnimation(
-                  achievement['unlocked']
-                      ? AppStyles.successGreen
-                      : AppStyles.primaryPurple,
+                  isUnlocked ? AppStyles.successGreen : AppStyles.primaryPurple,
                 ),
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              '${achievement['progress']}/${achievement['target']}',
-              style: AppStyles.bodySmall,
-            ),
+            Text('$progress/$target', style: AppStyles.bodySmall),
             const SizedBox(height: AppStyles.paddingLarge),
-            if (achievement['unlocked'])
+            if (isUnlocked)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(AppStyles.paddingMedium),
@@ -434,10 +432,6 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Unlocked', style: AppStyles.bodyLarge),
-                          Text(
-                            'On ${achievement['unlockedDate']}',
-                            style: AppStyles.bodySmall,
-                          ),
                         ],
                       ),
                     ),
