@@ -4,9 +4,9 @@ class PromiseModel {
   final String id;
   final String title;
   final String description;
-  final DateTime startTime; // New Field
-  final DateTime endTime; // New Field
-  final bool isRecursive; // New Field
+  final DateTime startTime;
+  final int durationMinutes; // Changed from endTime to duration
+  final bool isRecursive;
   final bool isCompleted;
   final String createdBy;
   final DateTime createdAt;
@@ -18,7 +18,7 @@ class PromiseModel {
     required this.title,
     required this.description,
     required this.startTime,
-    required this.endTime,
+    required this.durationMinutes,
     required this.isRecursive,
     this.isCompleted = false,
     required this.createdBy,
@@ -26,6 +26,9 @@ class PromiseModel {
     this.category = 'General',
     this.priority = 1,
   });
+
+  /// Helper to calculate endTime dynamically
+  DateTime get endTime => startTime.add(Duration(minutes: durationMinutes));
 
   /// Factory constructor to create a PromiseModel from a Firestore Document
   factory PromiseModel.fromFirestore(DocumentSnapshot doc) {
@@ -35,13 +38,11 @@ class PromiseModel {
       id: doc.id,
       title: data['title'] ?? '',
       description: data['description'] ?? '',
-      // Safe conversion for Timestamps
       startTime: (data['startTime'] is Timestamp)
           ? (data['startTime'] as Timestamp).toDate()
           : DateTime.now(),
-      endTime: (data['endTime'] is Timestamp)
-          ? (data['endTime'] as Timestamp).toDate()
-          : DateTime.now().add(const Duration(hours: 1)),
+      // Handle legacy data or new duration format
+      durationMinutes: data['durationMinutes'] ?? 60,
       isRecursive: data['isRecursive'] ?? false,
       isCompleted: data['isCompleted'] ?? false,
       createdBy: data['createdBy'] ?? '',
@@ -59,7 +60,7 @@ class PromiseModel {
       'title': title,
       'description': description,
       'startTime': Timestamp.fromDate(startTime),
-      'endTime': Timestamp.fromDate(endTime),
+      'durationMinutes': durationMinutes, // Save duration
       'isRecursive': isRecursive,
       'isCompleted': isCompleted,
       'createdBy': createdBy,
@@ -69,13 +70,12 @@ class PromiseModel {
     };
   }
 
-  /// CopyWith method - REQUIRED for toggleStatus to work
   PromiseModel copyWith({
     String? id,
     String? title,
     String? description,
     DateTime? startTime,
-    DateTime? endTime,
+    int? durationMinutes,
     bool? isRecursive,
     bool? isCompleted,
     String? createdBy,
@@ -88,7 +88,7 @@ class PromiseModel {
       title: title ?? this.title,
       description: description ?? this.description,
       startTime: startTime ?? this.startTime,
-      endTime: endTime ?? this.endTime,
+      durationMinutes: durationMinutes ?? this.durationMinutes,
       isRecursive: isRecursive ?? this.isRecursive,
       isCompleted: isCompleted ?? this.isCompleted,
       createdBy: createdBy ?? this.createdBy,

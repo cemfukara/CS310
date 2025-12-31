@@ -4,7 +4,7 @@ import '../utils/app_styles.dart';
 import '../providers/promise_provider.dart';
 import '../models/promise_model.dart';
 
-/// Promises Screen - View all promises across all categories
+/// Promises Screen - View promises split by Active and Completed status
 class PromisesScreen extends StatefulWidget {
   const PromisesScreen({super.key});
 
@@ -14,21 +14,21 @@ class PromisesScreen extends StatefulWidget {
 
 class _PromisesScreenState extends State<PromisesScreen> {
   String _selectedCategory = 'All';
-  // You might want to fetch these dynamically later, but static is fine for now
+
+  // --- UPDATED CATEGORY LIST ---
   final List<String> _categories = [
     'All',
     'Work',
     'Personal',
     'Health',
     'Family',
-    'Recurring',
-    'One-time',
   ];
 
   // Helper to determine status string from model
   String _getStatus(PromiseModel promise) {
     if (promise.isCompleted) return 'Completed';
 
+    // Uses the new getter 'endTime' from your model update
     final now = DateTime.now();
     if (now.isAfter(promise.startTime) && now.isBefore(promise.endTime)) {
       return 'In Progress';
@@ -39,7 +39,6 @@ class _PromisesScreenState extends State<PromisesScreen> {
     return 'Pending';
   }
 
-  // Helper to get color based on status
   Color _getStatusColor(String status) {
     switch (status) {
       case 'Completed':
@@ -53,7 +52,6 @@ class _PromisesScreenState extends State<PromisesScreen> {
     }
   }
 
-  // Helper to get icon based on status
   IconData _getStatusIcon(String status) {
     switch (status) {
       case 'Completed':
@@ -63,7 +61,7 @@ class _PromisesScreenState extends State<PromisesScreen> {
       case 'Overdue':
         return Icons.error_outline;
       default:
-        return Icons.pending; // Pending
+        return Icons.pending;
     }
   }
 
@@ -92,27 +90,33 @@ class _PromisesScreenState extends State<PromisesScreen> {
           }
         }
 
-        // 2. Filter List based on Category
-        final filteredPromises = _selectedCategory == 'All'
+        // 2. Filter List based on Category first
+        final categoryFilteredPromises = _selectedCategory == 'All'
             ? allPromises
             : allPromises
-                  .where((p) => p.category == _selectedCategory)
-                  .toList();
+            .where((p) => p.category == _selectedCategory)
+            .toList();
+
+        // 3. Split into Active and Completed
+        final activePromises = categoryFilteredPromises
+            .where((p) => !p.isCompleted)
+            .toList();
+
+        final completedPromises = categoryFilteredPromises
+            .where((p) => p.isCompleted)
+            .toList();
 
         return Scaffold(
           appBar: AppBar(
             title: const Text('All Promises'),
             centerTitle: true,
-            // REMOVED: The actions block with the "+" button was here.
           ),
-          // 3. Add Refresh Indicator
           body: RefreshIndicator(
             onRefresh: () async {
               await promiseProvider.reload();
             },
             child: SingleChildScrollView(
-              physics:
-                  const AlwaysScrollableScrollPhysics(), // Ensures pull-to-refresh always works
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: EdgeInsets.all(
                 isSmallScreen
                     ? AppStyles.paddingMedium
@@ -121,7 +125,7 @@ class _PromisesScreenState extends State<PromisesScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Category Filter
+                  // --- Category Filter ---
                   SizedBox(
                     height: 48,
                     child: ListView.builder(
@@ -157,7 +161,7 @@ class _PromisesScreenState extends State<PromisesScreen> {
                   ),
                   const SizedBox(height: AppStyles.paddingLarge),
 
-                  // Promise Stats (Real Data)
+                  // --- Stats Row ---
                   Row(
                     children: [
                       Expanded(
@@ -190,37 +194,56 @@ class _PromisesScreenState extends State<PromisesScreen> {
                   ),
                   const SizedBox(height: AppStyles.paddingXLarge),
 
-                  // Promises List Title
-                  Text('All Promises', style: AppStyles.headingSmall),
+                  // ---------------- ACTIVE PROMISES SECTION ----------------
+                  Text('Active Promises', style: AppStyles.headingSmall),
                   const SizedBox(height: AppStyles.paddingMedium),
 
-                  // Promises List (Real Data)
                   if (promiseProvider.isLoading)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(20.0),
-                        child: CircularProgressIndicator(),
-                      ),
-                    )
-                  else if (filteredPromises.isEmpty)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(40.0),
-                        child: Text("No promises found in this category."),
-                      ),
-                    )
+                    const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
+                  else if (activePromises.isEmpty)
+                    _buildEmptySection("No active promises.")
                   else
                     ..._buildRealPromisesList(
                       context,
-                      filteredPromises,
+                      activePromises,
                       promiseProvider,
                     ),
+
+                  const SizedBox(height: AppStyles.paddingXLarge),
+
+                  // ---------------- COMPLETED PROMISES SECTION ----------------
+                  Text('Completed Promises', style: AppStyles.headingSmall),
+                  const SizedBox(height: AppStyles.paddingMedium),
+
+                  if (!promiseProvider.isLoading)
+                    if (completedPromises.isEmpty)
+                      _buildEmptySection("No completed promises yet.")
+                    else
+                      ..._buildRealPromisesList(
+                        context,
+                        completedPromises,
+                        promiseProvider,
+                      ),
+
+                  const SizedBox(height: AppStyles.paddingXXLarge),
                 ],
               ),
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildEmptySection(String text) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20.0),
+        child: Text(
+          text,
+          style: AppStyles.bodyMedium.copyWith(color: AppStyles.mediumGray),
+        ),
+      ),
     );
   }
 
@@ -252,10 +275,10 @@ class _PromisesScreenState extends State<PromisesScreen> {
   }
 
   List<Widget> _buildRealPromisesList(
-    BuildContext context,
-    List<PromiseModel> promises,
-    PromiseProvider provider,
-  ) {
+      BuildContext context,
+      List<PromiseModel> promises,
+      PromiseProvider provider,
+      ) {
     return promises.map((promise) {
       final status = _getStatus(promise);
       final statusColor = _getStatusColor(status);
@@ -274,7 +297,10 @@ class _PromisesScreenState extends State<PromisesScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(promise.title, style: AppStyles.bodyLarge),
+                      Text(promise.title, style: AppStyles.bodyLarge.copyWith(
+                        decoration: promise.isCompleted ? TextDecoration.lineThrough : null,
+                        color: promise.isCompleted ? AppStyles.mediumGray : AppStyles.darkGray,
+                      )),
                       const SizedBox(height: 4),
                       Text(promise.category, style: AppStyles.bodySmall),
                     ],
@@ -298,19 +324,19 @@ class _PromisesScreenState extends State<PromisesScreen> {
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),
                   color: AppStyles.primaryPurple,
+                  // Disable edit if completed
                   onPressed: promise.isCompleted
                       ? null
                       : () async {
-                          // Navigate to edit and refresh on return
-                          await Navigator.pushNamed(
-                            context,
-                            '/edit-promise',
-                            arguments: promise,
-                          );
-                          if (mounted) {
-                            provider.reload();
-                          }
-                        },
+                    await Navigator.pushNamed(
+                      context,
+                      '/edit-promise',
+                      arguments: promise,
+                    );
+                    if (mounted) {
+                      provider.reload();
+                    }
+                  },
                   tooltip: 'Edit Promise',
                 ),
               ],
