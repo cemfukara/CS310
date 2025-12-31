@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
 import '../services/database_service.dart';
+import 'auth_provider.dart';
 
 class FriendsProvider with ChangeNotifier {
   final DatabaseService _db;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final AuthProvider _authProvider;
 
   List<UserModel> _friends = [];
   List<UserModel> _requests = [];
@@ -15,7 +15,7 @@ class FriendsProvider with ChangeNotifier {
   StreamSubscription? _friendsSub;
   StreamSubscription? _requestsSub;
 
-  FriendsProvider(this._db) {
+  FriendsProvider(this._db, this._authProvider) {
     _initStreams();
   }
 
@@ -45,7 +45,7 @@ class FriendsProvider with ChangeNotifier {
 
   Future<String?> sendRequest(String email) async {
     try {
-      final currentUser = _auth.currentUser;
+      final currentUser = _authProvider.user;
       if (currentUser == null) return "Not logged in";
       if (email.trim().toLowerCase() == currentUser.email?.toLowerCase())
         return "You cannot add yourself";
@@ -72,7 +72,7 @@ class FriendsProvider with ChangeNotifier {
   }
 
   Future<void> acceptRequest(UserModel request) async {
-    final currentUser = _auth.currentUser;
+    final currentUser = _authProvider.user;
     if (currentUser == null) return;
 
     await _db.acceptFriendRequest(
@@ -86,7 +86,7 @@ class FriendsProvider with ChangeNotifier {
   }
 
   Future<void> declineRequest(String requestUid) async {
-    final currentUser = _auth.currentUser;
+    final currentUser = _authProvider.user;
     if (currentUser == null) return;
     await _db.declineFriendRequest(currentUser.uid, requestUid);
   }

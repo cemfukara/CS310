@@ -41,11 +41,16 @@ void main() async {
           update: (_, db, __) => PromiseProvider(db),
         ),
         // --- ADD THIS BLOCK ---
-        ChangeNotifierProxyProvider<DatabaseService, FriendsProvider>(
+        ChangeNotifierProxyProvider2<
+          DatabaseService,
+          AuthProvider,
+          FriendsProvider
+        >(
           create: (context) => FriendsProvider(
             Provider.of<DatabaseService>(context, listen: false),
+            Provider.of<AuthProvider>(context, listen: false),
           ),
-          update: (_, db, __) => FriendsProvider(db),
+          update: (_, db, auth, __) => FriendsProvider(db, auth),
         ),
         // ---------------------
         ChangeNotifierProxyProvider<DatabaseService, GamificationProvider>(
