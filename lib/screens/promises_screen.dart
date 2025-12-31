@@ -24,26 +24,19 @@ class _PromisesScreenState extends State<PromisesScreen> {
 
   String _getStatus(PromiseModel promise) {
     if (promise.isCompleted) return 'Completed';
-    final now = DateTime.now();
-    if (now.isAfter(promise.startTime) && now.isBefore(promise.endTime)) {
-      return 'In Progress';
-    }
-    if (now.isAfter(promise.endTime)) {
-      return 'Overdue';
-    }
-    return 'Pending';
+    if (DateTime.now().isAfter(promise.endTime)) return 'Overdue';
+    return 'In Progress';
   }
 
   Color _getStatusColor(String status) {
     switch (status) {
       case 'Completed':
         return AppStyles.successGreen;
-      case 'In Progress':
-        return AppStyles.infoBlue;
       case 'Overdue':
         return AppStyles.errorRed;
+      case 'In Progress':
       default:
-        return AppStyles.warningOrange;
+        return AppStyles.infoBlue;
     }
   }
 
@@ -51,12 +44,11 @@ class _PromisesScreenState extends State<PromisesScreen> {
     switch (status) {
       case 'Completed':
         return Icons.check_circle;
-      case 'In Progress':
-        return Icons.schedule;
       case 'Overdue':
         return Icons.error_outline;
+      case 'In Progress':
       default:
-        return Icons.pending;
+        return Icons.schedule;
     }
   }
 
