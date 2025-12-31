@@ -103,7 +103,9 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final promises = promiseProvider.promises;
+        final promises = promiseProvider.promises
+            .where((p) => !p.isCompleted)
+            .toList();
 
         // 2. Wrap in RefreshIndicator for Pull-to-Refresh
         return RefreshIndicator(

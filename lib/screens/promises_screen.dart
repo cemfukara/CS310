@@ -298,17 +298,19 @@ class _PromisesScreenState extends State<PromisesScreen> {
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),
                   color: AppStyles.primaryPurple,
-                  onPressed: () async {
-                    // Navigate to edit and refresh on return
-                    await Navigator.pushNamed(
-                      context,
-                      '/edit-promise',
-                      arguments: promise,
-                    );
-                    if (mounted) {
-                      provider.reload();
-                    }
-                  },
+                  onPressed: promise.isCompleted
+                      ? null
+                      : () async {
+                          // Navigate to edit and refresh on return
+                          await Navigator.pushNamed(
+                            context,
+                            '/edit-promise',
+                            arguments: promise,
+                          );
+                          if (mounted) {
+                            provider.reload();
+                          }
+                        },
                   tooltip: 'Edit Promise',
                 ),
               ],

@@ -235,12 +235,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     ? AppStyles.successGreen
                     : AppStyles.mediumGray,
               ),
-              onPressed: () {
-                Provider.of<PromiseProvider>(
-                  context,
-                  listen: false,
-                ).toggleStatus(promise.id, !promise.isCompleted);
-              },
+              onPressed: promise.isCompleted
+                  ? null
+                  : () {
+                      Provider.of<PromiseProvider>(
+                        context,
+                        listen: false,
+                      ).toggleStatus(promise.id, !promise.isCompleted);
+                    },
             ),
           ],
         ),
