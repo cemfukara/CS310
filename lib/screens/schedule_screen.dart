@@ -226,8 +226,22 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 ],
               ),
             ),
-            if (promise.isCompleted)
-              const Icon(Icons.check_circle, color: AppStyles.successGreen),
+            IconButton(
+              icon: Icon(
+                promise.isCompleted
+                    ? Icons.check_circle
+                    : Icons.radio_button_unchecked,
+                color: promise.isCompleted
+                    ? AppStyles.successGreen
+                    : AppStyles.mediumGray,
+              ),
+              onPressed: () {
+                Provider.of<PromiseProvider>(
+                  context,
+                  listen: false,
+                ).toggleStatus(promise.id, !promise.isCompleted);
+              },
+            ),
           ],
         ),
       ),

@@ -292,11 +292,18 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   }
 
   Widget _buildPromiseCard(BuildContext context, PromiseModel promise) {
-    Color priorityColor = promise.priority >= 5
-        ? AppStyles.errorRed
-        : AppStyles.successGreen;
-    if (promise.priority == 4) priorityColor = AppStyles.warningOrange;
-    if (promise.priority == 3) priorityColor = AppStyles.infoBlue;
+    Color priorityColor;
+    if (promise.isCompleted) {
+      priorityColor = Colors.green[800]!; // Dark Green for completed
+    } else if (promise.priority >= 5) {
+      priorityColor = AppStyles.errorRed;
+    } else if (promise.priority == 4) {
+      priorityColor = AppStyles.warningOrange;
+    } else if (promise.priority == 3) {
+      priorityColor = AppStyles.infoBlue;
+    } else {
+      priorityColor = AppStyles.successGreen;
+    }
 
     return Card(
       margin: const EdgeInsets.only(bottom: AppStyles.paddingMedium),
@@ -322,9 +329,30 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
             ),
           ],
         ),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete_outline, color: AppStyles.errorRed),
-          onPressed: () => _deletePromise(context, promise.id),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: Icon(
+                promise.isCompleted
+                    ? Icons.check_circle
+                    : Icons.radio_button_unchecked,
+                color: promise.isCompleted
+                    ? AppStyles.successGreen
+                    : AppStyles.mediumGray,
+              ),
+              onPressed: () {
+                Provider.of<PromiseProvider>(
+                  context,
+                  listen: false,
+                ).toggleStatus(promise.id, !promise.isCompleted);
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: AppStyles.errorRed),
+              onPressed: () => _deletePromise(context, promise.id),
+            ),
+          ],
         ),
       ),
     );

@@ -77,18 +77,19 @@ class _PromisesScreenState extends State<PromisesScreen> {
         final allPromises = promiseProvider.promises;
 
         // 1. Calculate Stats
+        int overdueCount = 0;
         int completedCount = 0;
         int inProgressCount = 0;
-        int pendingCount = 0;
 
         for (var p in allPromises) {
           String status = _getStatus(p);
           if (status == 'Completed') {
             completedCount++;
-          } else if (status == 'In Progress')
+          } else if (status == 'In Progress') {
             inProgressCount++;
-          else
-            pendingCount++; // Groups Pending and Overdue for simple stats
+          } else if (status == 'Overdue') {
+            overdueCount++;
+          }
         }
 
         // 2. Filter List based on Category
@@ -179,10 +180,10 @@ class _PromisesScreenState extends State<PromisesScreen> {
                       const SizedBox(width: AppStyles.paddingMedium),
                       Expanded(
                         child: _buildStatCard(
-                          icon: Icons.pending,
-                          label: 'Pending',
-                          value: '$pendingCount',
-                          color: AppStyles.warningOrange,
+                          icon: Icons.error_outline,
+                          label: 'Overdue',
+                          value: '$overdueCount',
+                          color: AppStyles.errorRed,
                         ),
                       ),
                     ],
