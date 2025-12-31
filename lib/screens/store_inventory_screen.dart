@@ -11,9 +11,8 @@ class StoreInventoryScreen extends StatefulWidget {
 }
 
 class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
-  bool showStore = true; // true = Store, false = Inventory
+  bool showStore = true;
 
-  /// CATEGORIES
   final List<String> categories = [
     "All",
     "Badges",
@@ -24,7 +23,6 @@ class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
 
   String selectedCategory = "All";
 
-  /// STORE ITEMS
   final List<Map<String, dynamic>> storeItems = [
     {
       "name": "Achiever Badge",
@@ -84,12 +82,6 @@ class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
     },
   ];
 
-  // No local inventory generation needed anymore
-  @override
-  void initState() {
-    super.initState();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Consumer<GamificationProvider>(
@@ -134,9 +126,6 @@ class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
     );
   }
 
-  // ───────────────────────────────────────────────
-  // TOP SWITCH UI
-  // ───────────────────────────────────────────────
   Widget _buildTopSwitch() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -171,9 +160,6 @@ class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
     );
   }
 
-  // ───────────────────────────────────────────────
-  // CATEGORY SELECTOR
-  // ───────────────────────────────────────────────
   Widget _buildCategorySelector() {
     return SizedBox(
       height: 40,
@@ -207,9 +193,6 @@ class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
     );
   }
 
-  // ───────────────────────────────────────────────
-  // STORE GRID
-  // ───────────────────────────────────────────────
   Widget _buildStoreGrid(GamificationProvider provider) {
     final filtered = selectedCategory == "All"
         ? storeItems
@@ -226,9 +209,7 @@ class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
       itemCount: filtered.length,
       itemBuilder: (_, i) {
         final item = filtered[i];
-        final isOwned = provider.hasItem(
-          item["name"],
-        ); // Using name as ID for now
+        final isOwned = provider.hasItem(item["name"]);
 
         return GestureDetector(
           onTap: () => _openStoreDrawer(item, isOwned, provider),
@@ -242,12 +223,7 @@ class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
     );
   }
 
-  // ───────────────────────────────────────────────
-  // INVENTORY GRID
-  // ───────────────────────────────────────────────
   Widget _buildInventoryGrid(GamificationProvider provider) {
-    // For inventory, we filter storeItems by what the user owns
-    // In a real app, item definitions would be separate from user inventory data
     final userInventory = storeItems
         .where((item) => provider.hasItem(item["name"]))
         .toList();
@@ -278,9 +254,6 @@ class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
     );
   }
 
-  // ───────────────────────────────────────────────
-  // SHARED ITEM CARD UI
-  // ───────────────────────────────────────────────
   Widget _itemCard({
     required IconData icon,
     required String name,
@@ -313,9 +286,6 @@ class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
     );
   }
 
-  // ───────────────────────────────────────────────
-  // STORE DRAWER
-  // ───────────────────────────────────────────────
   void _openStoreDrawer(
     Map<String, dynamic> item,
     bool isOwned,
@@ -325,10 +295,12 @@ class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      constraints: const BoxConstraints(maxWidth: double.infinity),
+      backgroundColor: Colors.white,
       builder: (context) {
+        final width = MediaQuery.of(context).size.width;
+
         return SizedBox(
-          width: MediaQuery.of(context).size.width,
+          width: width,
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -349,7 +321,7 @@ class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
                         onPressed: () => _buy(item, provider),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppStyles.primaryPurple,
-                          foregroundColor: AppStyles.white,
+                          foregroundColor: Colors.white,
                         ),
                         child: Text("Buy for ${item["price"]} 🪙"),
                       ),
@@ -361,18 +333,19 @@ class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
     );
   }
 
-  // ───────────────────────────────────────────────
-  // INVENTORY DRAWER
-  // ───────────────────────────────────────────────
   void _openInventoryDrawer(Map<String, dynamic> item) {
+    final provider = Provider.of<GamificationProvider>(context, listen: false);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      constraints: const BoxConstraints(maxWidth: double.infinity),
+      backgroundColor: Colors.white,
       builder: (context) {
+        final width = MediaQuery.of(context).size.width;
+
         return SizedBox(
-          width: MediaQuery.of(context).size.width,
+          width: width,
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -388,10 +361,21 @@ class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () async {
+                    await provider.equipBadge(item["name"]);
+                    if (!mounted) return;
+                    Navigator.pop(context);
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text("${item["name"]} equipped!"),
+                        backgroundColor: AppStyles.successGreen,
+                      ),
+                    );
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppStyles.successGreen,
-                    foregroundColor: AppStyles.white,
+                    foregroundColor: Colors.white,
                   ),
                   child: const Text("Equip"),
                 ),
@@ -403,32 +387,22 @@ class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
     );
   }
 
-  // ───────────────────────────────────────────────
-  // BUY LOGIC
-  // ───────────────────────────────────────────────
   void _buy(Map<String, dynamic> item, GamificationProvider provider) async {
     final int price = item["price"];
-    final String itemId = item["name"]; // Using name as ID
+    final String itemId = item["name"];
 
     final success = await provider.buyItem(itemId, price);
 
     if (!mounted) return;
-    Navigator.pop(context); // close sheet
+    Navigator.pop(context);
 
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Purchased ${item["name"]}!"),
-          backgroundColor: AppStyles.successGreen,
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success ? "Purchased ${item["name"]}!" : "Not enough coins!",
         ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text("Not enough coins!"),
-          backgroundColor: AppStyles.errorRed,
-        ),
-      );
-    }
+        backgroundColor: success ? AppStyles.successGreen : AppStyles.errorRed,
+      ),
+    );
   }
 }

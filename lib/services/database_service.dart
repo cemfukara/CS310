@@ -63,4 +63,7 @@ abstract class DatabaseService {
   Stream<List<PromiseRequestModel>> getPromiseRequestsStream();
   Future<void> acceptPromiseRequest(PromiseRequestModel request);
   Future<void> declinePromiseRequest(String requestId);
+
+  // Badge equip
+  Future<void> equipBadge(String badges);
 }

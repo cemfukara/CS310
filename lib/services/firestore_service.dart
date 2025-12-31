@@ -363,4 +363,19 @@ class FirestoreService implements DatabaseService {
         .doc(requestId)
         .delete();
   }
+
+  @override
+  Future<void> equipBadge(String badgeId) async {
+    if (_userId == null) return;
+
+    final ref = _db
+        .collection('users')
+        .doc(_userId)
+        .collection('gamification')
+        .doc('stats');
+
+    await ref.set({
+      'equippedBadges': [badgeId],
+    }, SetOptions(merge: true));
+  }
 }

@@ -4,6 +4,7 @@ class UserStatsModel {
   final int level;
   final List<String> inventory; // List of item IDs owned
   final List<String> achievements; // List of achievement IDs unlocked
+  final List<String> equippedBadges; // List of equipped badges
   final int totalPromisesCompleted;
   final int currentStreak;
 
@@ -13,6 +14,7 @@ class UserStatsModel {
     this.level = 1,
     this.inventory = const [],
     this.achievements = const [],
+    this.equippedBadges = const [],
     this.totalPromisesCompleted = 0,
     this.currentStreak = 0,
   });
@@ -24,6 +26,7 @@ class UserStatsModel {
       level: data['level'] ?? 1,
       inventory: List<String>.from(data['inventory'] ?? []),
       achievements: List<String>.from(data['achievements'] ?? []),
+      equippedBadges: List<String>.from(data['equippedBadges'] ?? []),
       totalPromisesCompleted: data['totalPromisesCompleted'] ?? 0,
       currentStreak: data['currentStreak'] ?? 0,
     );
@@ -36,6 +39,7 @@ class UserStatsModel {
       'level': level,
       'inventory': inventory,
       'achievements': achievements,
+      'equippedBadges': equippedBadges,
       'totalPromisesCompleted': totalPromisesCompleted,
       'currentStreak': currentStreak,
     };

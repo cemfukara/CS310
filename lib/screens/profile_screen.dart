@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../utils/app_styles.dart';
 import '../providers/auth_provider.dart';
+import '../providers/gamification_provider.dart';
 import 'settings_screen.dart';
 
 /// Profile Screen - Displays real user data from Firebase Auth
@@ -18,27 +19,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 600;
 
-    // 1. Get the real user from AuthProvider
+    // Auth
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.user;
 
-    // 2. Parse Name (Updated Logic)
-    // Splits "Isa Gorkem Akdogan" correctly into First: "Isa Gorkem", Last: "Akdogan"
+    // Gamification
+    final gamification = Provider.of<GamificationProvider>(context);
+    final equippedBadges = gamification.stats.equippedBadges;
+
+    // --- Name Parsing ---
     String firstName = '';
     String lastName = '';
 
     if (user?.displayName != null && user!.displayName!.isNotEmpty) {
-      List<String> nameParts = user.displayName!.split(' ');
-      if (nameParts.isNotEmpty) {
-        if (nameParts.length == 1) {
-          // If only one name exists (e.g. "Isa"), it's the first name
-          firstName = nameParts.first;
-        } else {
-          // Take the LAST part as the Last Name
-          lastName = nameParts.last;
-          // Join all previous parts as the First Name
-          firstName = nameParts.sublist(0, nameParts.length - 1).join(' ');
-        }
+      List<String> parts = user.displayName!.split(' ');
+      if (parts.length == 1) {
+        firstName = parts.first;
+      } else {
+        lastName = parts.last;
+        firstName = parts.sublist(0, parts.length - 1).join(' ');
       }
     }
 
@@ -67,7 +66,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Profile Picture Card
+            // ───────── PROFILE CARD ─────────
             Container(
               padding: const EdgeInsets.all(AppStyles.paddingLarge),
               decoration: BoxDecoration(
@@ -76,7 +75,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: Column(
                 children: [
-                  // Profile Image
+                  // Avatar
                   Container(
                     width: isSmallScreen ? 120 : 160,
                     height: isSmallScreen ? 120 : 160,
@@ -97,9 +96,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                   ),
+
                   const SizedBox(height: AppStyles.paddingLarge),
 
-                  // User Name
+                  // Name
                   Text(
                     user?.displayName ?? 'User',
                     style: AppStyles.headingMedium.copyWith(
@@ -107,9 +107,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     textAlign: TextAlign.center,
                   ),
+
                   const SizedBox(height: AppStyles.paddingSmall),
 
-                  // User Email
+                  // Email
                   Text(
                     email,
                     style: AppStyles.bodyMedium.copyWith(
@@ -117,16 +118,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     textAlign: TextAlign.center,
                   ),
+
+                  const SizedBox(height: 16),
+
+                  // ───────── BADGES SECTION ─────────
+                  if (equippedBadges.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        children: [
+                          const Text(
+                            "Equipped Badges",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            children: equippedBadges.map((badge) {
+                              return Chip(
+                                label: Text(badge),
+                                avatar: const Icon(
+                                  Icons.military_tech,
+                                  size: 18,
+                                  color: AppStyles.primaryPurple,
+                                ),
+                                backgroundColor: Colors.white,
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
+
             const SizedBox(height: AppStyles.paddingXLarge),
 
-            // Profile Information Section
+            // ───────── PERSONAL INFO ─────────
             Text('Personal Information', style: AppStyles.headingSmall),
             const SizedBox(height: AppStyles.paddingMedium),
 
-            // Profile Fields (Real Data)
             _buildProfileField(
               label: 'First Name',
               value: firstName,
@@ -146,9 +188,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               value: email,
               icon: Icons.email_outlined,
             ),
+
             const SizedBox(height: AppStyles.paddingXLarge),
 
-            // Action Buttons
+            // ───────── ACTION BUTTONS ─────────
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.push(
@@ -166,12 +209,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             ),
+
             const SizedBox(height: AppStyles.paddingMedium),
 
             OutlinedButton.icon(
-              onPressed: () {
-                _showLogoutDialog(context);
-              },
+              onPressed: () => _showLogoutDialog(context),
               icon: const Icon(Icons.logout_outlined),
               label: const Text('Log Out'),
               style: OutlinedButton.styleFrom(
@@ -186,36 +228,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  /// Build individual profile field
+  /// Build profile field UI
   Widget _buildProfileField({
     required String label,
     required String value,
     required IconData icon,
   }) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final cs = theme.colorScheme;
     final textTheme = theme.textTheme;
 
     return Container(
       padding: const EdgeInsets.all(AppStyles.paddingMedium),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: cs.surface,
         borderRadius: AppStyles.borderRadiusMediumAll,
-        border: Border.all(color: colorScheme.outlineVariant, width: 1),
+        border: Border.all(color: cs.outlineVariant, width: 1),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(AppStyles.paddingSmall),
             decoration: BoxDecoration(
-              color: colorScheme.primary.withOpacity(0.15),
+              color: cs.primary.withOpacity(0.15),
               borderRadius: AppStyles.borderRadiusSmallAll,
             ),
-            child: Icon(
-              icon,
-              color: colorScheme.primary,
-              size: AppStyles.iconSizeMedium,
-            ),
+            child: Icon(icon, color: cs.primary),
           ),
           const SizedBox(width: AppStyles.paddingMedium),
           Expanded(
@@ -225,17 +263,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Text(
                   label,
                   style: textTheme.labelSmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
+                    color: cs.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   value.isNotEmpty ? value : 'Not set',
-                  style: textTheme.bodyLarge?.copyWith(
-                    color: colorScheme.onSurface,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.bodyLarge?.copyWith(color: cs.onSurface),
                 ),
               ],
             ),
@@ -245,11 +279,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  /// Show logout confirmation dialog
+  /// Logout dialog
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (context) {
         return AlertDialog(
           backgroundColor: AppStyles.white,
           shape: RoundedRectangleBorder(
@@ -267,7 +301,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: const Icon(
                   Icons.logout_outlined,
                   color: AppStyles.warningOrange,
-                  size: AppStyles.iconSizeMedium,
                 ),
               ),
               const SizedBox(width: AppStyles.paddingMedium),
@@ -277,12 +310,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
           content: Text(
-            'Are you sure you want to log out? You\'ll need to log in again to access your promises.',
+            "Are you sure you want to log out?",
             style: AppStyles.bodyMedium,
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.pop(context),
               child: Text(
                 'Cancel',
                 style: AppStyles.labelLarge.copyWith(
@@ -296,7 +329,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   context,
                   listen: false,
                 ).logout();
-
                 Navigator.of(context).popUntil((route) => route.isFirst);
               },
               child: Text(

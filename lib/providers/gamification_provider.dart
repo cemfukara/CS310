@@ -55,4 +55,9 @@ class GamificationProvider extends ChangeNotifier {
   Future<void> addFreeCoins(int amount) async {
     await _db.updateCoins(amount);
   }
+
+  // equipBadge
+  Future<void> equipBadge(String badgeId) async {
+    await _db.equipBadge(badgeId);
+  }
 }
