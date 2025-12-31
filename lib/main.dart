@@ -31,34 +31,40 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+
+        /// DB depends on auth – recreate safely when auth changes
         ProxyProvider<AuthProvider, DatabaseService>(
           update: (_, auth, __) => FirestoreService(),
         ),
+
+        /// PROMISES
         ChangeNotifierProxyProvider<DatabaseService, PromiseProvider>(
-          create: (context) => PromiseProvider(
-            Provider.of<DatabaseService>(context, listen: false),
-          ),
-          update: (_, db, __) => PromiseProvider(db),
+          create: (context) => PromiseProvider(context.read<DatabaseService>()),
+          update: (_, db, previous) {
+            previous?.updateDatabase(db);
+            return previous!;
+          },
         ),
-        // --- ADD THIS BLOCK ---
-        ChangeNotifierProxyProvider2<
-          DatabaseService,
-          AuthProvider,
-          FriendsProvider
-        >(
-          create: (context) => FriendsProvider(
-            Provider.of<DatabaseService>(context, listen: false),
-            Provider.of<AuthProvider>(context, listen: false),
-          ),
-          update: (_, db, auth, __) => FriendsProvider(db, auth),
+
+        /// FRIENDS
+        ChangeNotifierProxyProvider<DatabaseService, FriendsProvider>(
+          create: (context) => FriendsProvider(context.read<DatabaseService>()),
+          update: (_, db, previous) {
+            previous?.updateDatabase(db);
+            return previous!;
+          },
         ),
-        // ---------------------
+
+        /// GAMIFICATION
         ChangeNotifierProxyProvider<DatabaseService, GamificationProvider>(
-          create: (context) => GamificationProvider(
-            Provider.of<DatabaseService>(context, listen: false),
-          ),
-          update: (_, db, __) => GamificationProvider(db),
+          create: (context) =>
+              GamificationProvider(context.read<DatabaseService>()),
+          update: (_, db, previous) {
+            previous?.updateDatabase(db);
+            return previous!;
+          },
         ),
+
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
       child: const PromiseApp(),

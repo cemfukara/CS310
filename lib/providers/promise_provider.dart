@@ -4,7 +4,7 @@ import '../models/promise_model.dart';
 import '../services/database_service.dart';
 
 class PromiseProvider with ChangeNotifier {
-  final DatabaseService _db;
+  late DatabaseService _db;
   StreamSubscription<List<PromiseModel>>? _promisesSubscription;
 
   List<PromiseModel> _promises = [];
@@ -13,6 +13,11 @@ class PromiseProvider with ChangeNotifier {
   // Constructor receives the DB service
   PromiseProvider(this._db) {
     _listenToPromises();
+  }
+
+  void updateDatabase(DatabaseService db) {
+    _db = db;
+    notifyListeners();
   }
 
   List<PromiseModel> get promises => _promises;
