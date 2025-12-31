@@ -27,7 +27,9 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
   int difficultyStars = 3;
 
   Map<String, int> difficultyTime = {'hours': 0, 'minutes': 0};
-  List<Map<String, DateTime?>> dynamicSlots = [{'start': null, 'end': null}];
+  List<Map<String, DateTime?>> dynamicSlots = [
+    {'start': null, 'end': null},
+  ];
 
   @override
   void dispose() {
@@ -47,7 +49,9 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
     }
 
     // Check if at least one slot has valid times
-    bool hasValidSlot = dynamicSlots.any((slot) => slot['start'] != null && slot['end'] != null);
+    bool hasValidSlot = dynamicSlots.any(
+      (slot) => slot['start'] != null && slot['end'] != null,
+    );
     if (!hasValidSlot) {
       _showErrorSnackbar("Please set a start and end time for your promise.");
       return;
@@ -60,12 +64,14 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
     );
 
     try {
-      final promiseProvider = Provider.of<PromiseProvider>(context, listen: false);
+      final promiseProvider = Provider.of<PromiseProvider>(
+        context,
+        listen: false,
+      );
 
       // LOOP: Create a separate promise for every slot defined
       for (var slot in dynamicSlots) {
         if (slot['start'] != null && slot['end'] != null) {
-
           await promiseProvider.addPromise(
             title: _nameController.text.trim(),
             description: _descriptionController.text.trim(),
@@ -75,7 +81,6 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
             category: isRecurring ? 'Recurring' : 'One-time',
             priority: difficultyStars,
           );
-
         }
       }
 
@@ -154,7 +159,15 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
   }
 
   Future<void> _pickDayTime(int index, String type) async {
-    final List<String> weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final List<String> weekdays = [
+      'Mon',
+      'Tue',
+      'Wed',
+      'Thu',
+      'Fri',
+      'Sat',
+      'Sun',
+    ];
     String? selectedDay = weekdays[0];
 
     await showDialog(
@@ -163,12 +176,12 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
         return AlertDialog(
           title: const Text('Select Day of Week'),
           content: DropdownButtonFormField<String>(
-            value: selectedDay,
+            initialValue: selectedDay,
             items: weekdays
-                .map((day) => DropdownMenuItem<String>(
-              value: day,
-              child: Text(day),
-            ))
+                .map(
+                  (day) =>
+                      DropdownMenuItem<String>(value: day, child: Text(day)),
+                )
                 .toList(),
             onChanged: (newValue) {
               selectedDay = newValue;
@@ -201,7 +214,9 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
       int currentWeekday = now.weekday;
       final int dayIndex = weekdays.indexOf(resultDay.toString());
       int targetWeekday = dayIndex + 1;
-      DateTime targetDate = now.add(Duration(days: targetWeekday - currentWeekday));
+      DateTime targetDate = now.add(
+        Duration(days: targetWeekday - currentWeekday),
+      );
 
       final DateTime finalDateTime = DateTime(
         targetDate.year,
@@ -236,10 +251,12 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
   }
 
   void _pickDifficultyTime() async {
-    TextEditingController hoursController =
-    TextEditingController(text: difficultyTime['hours'].toString());
-    TextEditingController minutesController =
-    TextEditingController(text: difficultyTime['minutes'].toString());
+    TextEditingController hoursController = TextEditingController(
+      text: difficultyTime['hours'].toString(),
+    );
+    TextEditingController minutesController = TextEditingController(
+      text: difficultyTime['minutes'].toString(),
+    );
 
     await showDialog(
       context: context,
@@ -344,7 +361,11 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
     );
   }
 
-  Widget _buildTimeSlotChip(String label, bool isSelected, {VoidCallback? onTap}) {
+  Widget _buildTimeSlotChip(
+    String label,
+    bool isSelected, {
+    VoidCallback? onTap,
+  }) {
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -352,7 +373,9 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
         decoration: BoxDecoration(
           color: isSelected ? AppStyles.primaryPurple : Colors.grey[200],
           borderRadius: BorderRadius.circular(8.0),
-          border: isSelected ? Border.all(color: AppStyles.primaryPurple) : null,
+          border: isSelected
+              ? Border.all(color: AppStyles.primaryPurple)
+              : null,
         ),
         child: Text(
           label,
@@ -408,10 +431,7 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
         ),
         title: const Text(
           'New Promise',
-          style: TextStyle(
-            color: AppStyles.white,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: AppStyles.white, fontWeight: FontWeight.bold),
         ),
       ),
       body: SingleChildScrollView(
@@ -441,7 +461,11 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(width: 8),
-            Icon(Icons.drive_file_rename_outline, size: 18, color: Colors.grey[600]),
+            Icon(
+              Icons.drive_file_rename_outline,
+              size: 18,
+              color: Colors.grey[600],
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -516,7 +540,9 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
     ];
 
     final String dateFormat = isRecurring ? dayTimeFormat : fullDateTimeFormat;
-    final Function pickFunction = isRecurring ? _pickDayTime : _pickFullDateTime;
+    final Function pickFunction = isRecurring
+        ? _pickDayTime
+        : _pickFullDateTime;
 
     dynamicSlots.asMap().forEach((index, slotPair) {
       final DateTime? startTime = slotPair['start'];
@@ -657,24 +683,21 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
         ),
         const SizedBox(height: 8),
         Row(
-          children: List.generate(
-            5,
-                (index) {
-              return IconButton(
-                onPressed: () {
-                  setState(() {
-                    difficultyStars = index + 1;
-                  });
-                },
-                icon: Icon(
-                  index < difficultyStars ? Icons.star : Icons.star_border,
-                  color: Colors.yellow[700],
-                ),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              );
-            },
-          ),
+          children: List.generate(5, (index) {
+            return IconButton(
+              onPressed: () {
+                setState(() {
+                  difficultyStars = index + 1;
+                });
+              },
+              icon: Icon(
+                index < difficultyStars ? Icons.star : Icons.star_border,
+                color: Colors.yellow[700],
+              ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            );
+          }),
         ),
         const SizedBox(height: 15),
         Wrap(
@@ -682,11 +705,11 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
           children: [
             _buildPeriodChip(
               'Total',
-                  (label) => setState(() => selectedDifficultyPeriod = label),
+              (label) => setState(() => selectedDifficultyPeriod = label),
             ),
             _buildPeriodChip(
               'Per week',
-                  (label) => setState(() => selectedDifficultyPeriod = label),
+              (label) => setState(() => selectedDifficultyPeriod = label),
             ),
             InkWell(
               onTap: () {

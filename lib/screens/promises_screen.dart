@@ -15,7 +15,15 @@ class PromisesScreen extends StatefulWidget {
 class _PromisesScreenState extends State<PromisesScreen> {
   String _selectedCategory = 'All';
   // You might want to fetch these dynamically later, but static is fine for now
-  final List<String> _categories = ['All', 'Work', 'Personal', 'Health', 'Family', 'Recurring', 'One-time'];
+  final List<String> _categories = [
+    'All',
+    'Work',
+    'Personal',
+    'Health',
+    'Family',
+    'Recurring',
+    'One-time',
+  ];
 
   // Helper to determine status string from model
   String _getStatus(PromiseModel promise) {
@@ -34,20 +42,28 @@ class _PromisesScreenState extends State<PromisesScreen> {
   // Helper to get color based on status
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'Completed': return AppStyles.successGreen;
-      case 'In Progress': return AppStyles.infoBlue;
-      case 'Overdue': return AppStyles.errorRed;
-      default: return AppStyles.warningOrange; // Pending
+      case 'Completed':
+        return AppStyles.successGreen;
+      case 'In Progress':
+        return AppStyles.infoBlue;
+      case 'Overdue':
+        return AppStyles.errorRed;
+      default:
+        return AppStyles.warningOrange; // Pending
     }
   }
 
   // Helper to get icon based on status
   IconData _getStatusIcon(String status) {
     switch (status) {
-      case 'Completed': return Icons.check_circle;
-      case 'In Progress': return Icons.schedule;
-      case 'Overdue': return Icons.error_outline;
-      default: return Icons.pending; // Pending
+      case 'Completed':
+        return Icons.check_circle;
+      case 'In Progress':
+        return Icons.schedule;
+      case 'Overdue':
+        return Icons.error_outline;
+      default:
+        return Icons.pending; // Pending
     }
   }
 
@@ -67,15 +83,20 @@ class _PromisesScreenState extends State<PromisesScreen> {
 
         for (var p in allPromises) {
           String status = _getStatus(p);
-          if (status == 'Completed') completedCount++;
-          else if (status == 'In Progress') inProgressCount++;
-          else pendingCount++; // Groups Pending and Overdue for simple stats
+          if (status == 'Completed') {
+            completedCount++;
+          } else if (status == 'In Progress')
+            inProgressCount++;
+          else
+            pendingCount++; // Groups Pending and Overdue for simple stats
         }
 
         // 2. Filter List based on Category
         final filteredPromises = _selectedCategory == 'All'
             ? allPromises
-            : allPromises.where((p) => p.category == _selectedCategory).toList();
+            : allPromises
+                  .where((p) => p.category == _selectedCategory)
+                  .toList();
 
         return Scaffold(
           appBar: AppBar(
@@ -89,9 +110,12 @@ class _PromisesScreenState extends State<PromisesScreen> {
               await promiseProvider.reload();
             },
             child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(), // Ensures pull-to-refresh always works
+              physics:
+                  const AlwaysScrollableScrollPhysics(), // Ensures pull-to-refresh always works
               padding: EdgeInsets.all(
-                isSmallScreen ? AppStyles.paddingMedium : AppStyles.paddingLarge,
+                isSmallScreen
+                    ? AppStyles.paddingMedium
+                    : AppStyles.paddingLarge,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -107,7 +131,9 @@ class _PromisesScreenState extends State<PromisesScreen> {
                         final isSelected = category == _selectedCategory;
 
                         return Padding(
-                          padding: const EdgeInsets.only(right: AppStyles.paddingSmall),
+                          padding: const EdgeInsets.only(
+                            right: AppStyles.paddingSmall,
+                          ),
                           child: FilterChip(
                             label: Text(category),
                             selected: isSelected,
@@ -119,7 +145,9 @@ class _PromisesScreenState extends State<PromisesScreen> {
                             backgroundColor: AppStyles.nearWhite,
                             selectedColor: AppStyles.primaryPurple,
                             labelStyle: AppStyles.labelMedium.copyWith(
-                              color: isSelected ? AppStyles.white : AppStyles.darkGray,
+                              color: isSelected
+                                  ? AppStyles.white
+                                  : AppStyles.darkGray,
                             ),
                           ),
                         );
@@ -162,18 +190,17 @@ class _PromisesScreenState extends State<PromisesScreen> {
                   const SizedBox(height: AppStyles.paddingXLarge),
 
                   // Promises List Title
-                  Text(
-                    'All Promises',
-                    style: AppStyles.headingSmall,
-                  ),
+                  Text('All Promises', style: AppStyles.headingSmall),
                   const SizedBox(height: AppStyles.paddingMedium),
 
                   // Promises List (Real Data)
                   if (promiseProvider.isLoading)
-                    const Center(child: Padding(
-                      padding: EdgeInsets.all(20.0),
-                      child: CircularProgressIndicator(),
-                    ))
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(20.0),
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
                   else if (filteredPromises.isEmpty)
                     const Center(
                       child: Padding(
@@ -182,7 +209,11 @@ class _PromisesScreenState extends State<PromisesScreen> {
                       ),
                     )
                   else
-                    ..._buildRealPromisesList(context, filteredPromises, promiseProvider),
+                    ..._buildRealPromisesList(
+                      context,
+                      filteredPromises,
+                      promiseProvider,
+                    ),
                 ],
               ),
             ),
@@ -208,14 +239,22 @@ class _PromisesScreenState extends State<PromisesScreen> {
             const SizedBox(height: AppStyles.paddingSmall),
             Text(value, style: AppStyles.headingSmall.copyWith(color: color)),
             const SizedBox(height: 4),
-            Text(label, style: AppStyles.bodySmall, textAlign: TextAlign.center),
+            Text(
+              label,
+              style: AppStyles.bodySmall,
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),
     );
   }
 
-  List<Widget> _buildRealPromisesList(BuildContext context, List<PromiseModel> promises, PromiseProvider provider) {
+  List<Widget> _buildRealPromisesList(
+    BuildContext context,
+    List<PromiseModel> promises,
+    PromiseProvider provider,
+  ) {
     return promises.map((promise) {
       final status = _getStatus(promise);
       final statusColor = _getStatusColor(status);
@@ -236,10 +275,7 @@ class _PromisesScreenState extends State<PromisesScreen> {
                     children: [
                       Text(promise.title, style: AppStyles.bodyLarge),
                       const SizedBox(height: 4),
-                      Text(
-                        promise.category,
-                        style: AppStyles.bodySmall,
-                      ),
+                      Text(promise.category, style: AppStyles.bodySmall),
                     ],
                   ),
                 ),

@@ -14,6 +14,7 @@ class AppStyles {
   // Secondary Colors
   static const Color accentPurple = Color(0xFFEC4899); // Pink accent
   static const Color accentBlue = Color(0xFF3B82F6); // Blue accent
+  static const Color secondaryTeal = Color(0xFF14B8A6); // Teal accent
 
   // Neutral Colors
   static const Color white = Color(0xFFFFFFFF);

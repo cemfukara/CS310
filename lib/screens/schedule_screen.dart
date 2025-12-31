@@ -43,7 +43,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   /// Filter promises for the selected date
-  List<PromiseModel> _getEventsForDate(List<PromiseModel> allPromises, DateTime date) {
+  List<PromiseModel> _getEventsForDate(
+    List<PromiseModel> allPromises,
+    DateTime date,
+  ) {
     return allPromises.where((promise) {
       // 1. If it's a one-time event, dates must match exactly
       if (!promise.isRecursive) {
@@ -54,7 +57,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       //    a. The selected date is AFTER or SAME as the start date
       //    b. The weekdays match (e.g., both are Monday)
       if (promise.isRecursive) {
-        final isAfterStart = date.isAtSameMomentAs(promise.startTime) || date.isAfter(promise.startTime);
+        final isAfterStart =
+            date.isAtSameMomentAs(promise.startTime) ||
+            date.isAfter(promise.startTime);
         final isSameWeekday = promise.startTime.weekday == date.weekday;
         return isAfterStart && isSameWeekday;
       }
@@ -77,20 +82,20 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           children: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
               .map(
                 (day) => Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  vertical: AppStyles.paddingSmall,
-                ),
-                child: Text(
-                  day,
-                  textAlign: TextAlign.center,
-                  style: AppStyles.labelMedium.copyWith(
-                    color: AppStyles.mediumGray,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppStyles.paddingSmall,
+                    ),
+                    child: Text(
+                      day,
+                      textAlign: TextAlign.center,
+                      style: AppStyles.labelMedium.copyWith(
+                        color: AppStyles.mediumGray,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-          )
+              )
               .toList(),
         ),
         const SizedBox(height: AppStyles.paddingSmall),
@@ -162,10 +167,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   /// Build event item
   Widget _buildEventItem(PromiseModel promise) {
     // Format times (e.g. "09:00 - 10:00")
-    final timeStr = '${DateFormat('HH:mm').format(promise.startTime)} - ${DateFormat('HH:mm').format(promise.endTime)}';
+    final timeStr =
+        '${DateFormat('HH:mm').format(promise.startTime)} - ${DateFormat('HH:mm').format(promise.endTime)}';
 
     // Determine color based on completion
-    final color = promise.isCompleted ? AppStyles.successGreen : AppStyles.primaryPurple;
+    final color = promise.isCompleted
+        ? AppStyles.successGreen
+        : AppStyles.primaryPurple;
 
     return Card(
       child: Padding(
@@ -188,7 +196,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   Text(
                     promise.title,
                     style: AppStyles.bodyLarge.copyWith(
-                      decoration: promise.isCompleted ? TextDecoration.lineThrough : null,
+                      decoration: promise.isCompleted
+                          ? TextDecoration.lineThrough
+                          : null,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -196,16 +206,21 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(Icons.access_time, size: 14, color: AppStyles.mediumGray),
-                      const SizedBox(width: 4),
-                      Text(
-                        timeStr,
-                        style: AppStyles.bodySmall,
+                      Icon(
+                        Icons.access_time,
+                        size: 14,
+                        color: AppStyles.mediumGray,
                       ),
+                      const SizedBox(width: 4),
+                      Text(timeStr, style: AppStyles.bodySmall),
                       if (promise.isRecursive) ...[
                         const SizedBox(width: 8),
-                        Icon(Icons.repeat, size: 14, color: AppStyles.mediumGray),
-                      ]
+                        Icon(
+                          Icons.repeat,
+                          size: 14,
+                          color: AppStyles.mediumGray,
+                        ),
+                      ],
                     ],
                   ),
                 ],
@@ -227,20 +242,20 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     return Consumer<PromiseProvider>(
       builder: (context, promiseProvider, child) {
         // Get events for the selected date
-        final dailyEvents = _getEventsForDate(promiseProvider.promises, _selectedDate);
+        final dailyEvents = _getEventsForDate(
+          promiseProvider.promises,
+          _selectedDate,
+        );
         // Sort by time
-        dailyEvents.sort((a, b) => a.startTime.hour.compareTo(b.startTime.hour));
+        dailyEvents.sort(
+          (a, b) => a.startTime.hour.compareTo(b.startTime.hour),
+        );
 
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('Schedule'),
-            centerTitle: true,
-          ),
+          appBar: AppBar(title: const Text('Schedule'), centerTitle: true),
           body: SingleChildScrollView(
             padding: EdgeInsets.all(
-              isSmallScreen
-                  ? AppStyles.paddingMedium
-                  : AppStyles.paddingLarge,
+              isSmallScreen ? AppStyles.paddingMedium : AppStyles.paddingLarge,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -287,10 +302,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   decoration: BoxDecoration(
                     color: AppStyles.nearWhite,
                     borderRadius: AppStyles.borderRadiusMediumAll,
-                    border: Border.all(
-                      color: AppStyles.lightGray,
-                      width: 1,
-                    ),
+                    border: Border.all(color: AppStyles.lightGray, width: 1),
                   ),
                   child: _buildCalendarGrid(),
                 ),
@@ -341,10 +353,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     ),
                   )
                 else
-                  ...dailyEvents.map((event) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12.0),
-                    child: _buildEventItem(event),
-                  )),
+                  ...dailyEvents.map(
+                    (event) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: _buildEventItem(event),
+                    ),
+                  ),
               ],
             ),
           ),

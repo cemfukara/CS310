@@ -11,7 +11,8 @@ class FriendsScreen extends StatefulWidget {
   State<FriendsScreen> createState() => _FriendsScreenState();
 }
 
-class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProviderStateMixin {
+class _FriendsScreenState extends State<FriendsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -39,7 +40,9 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Enter the exact email of your friend to send a request.'),
+                const Text(
+                  'Enter the exact email of your friend to send a request.',
+                ),
                 const SizedBox(height: 10),
                 TextField(
                   controller: emailController,
@@ -63,35 +66,42 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
                 child: const Text('Cancel'),
               ),
               ElevatedButton(
-                onPressed: isSearching ? null : () async {
-                  if (emailController.text.isEmpty) return;
+                onPressed: isSearching
+                    ? null
+                    : () async {
+                        if (emailController.text.isEmpty) return;
 
-                  setState(() => isSearching = true);
+                        setState(() => isSearching = true);
 
-                  final provider = Provider.of<FriendsProvider>(context, listen: false);
-                  final error = await provider.sendRequest(emailController.text);
+                        final provider = Provider.of<FriendsProvider>(
+                          context,
+                          listen: false,
+                        );
+                        final error = await provider.sendRequest(
+                          emailController.text,
+                        );
 
-                  if (mounted) {
-                    setState(() => isSearching = false);
-                    Navigator.pop(context); // Close dialog
+                        if (mounted) {
+                          setState(() => isSearching = false);
+                          Navigator.pop(context); // Close dialog
 
-                    if (error == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Friend request sent!'),
-                          backgroundColor: AppStyles.successGreen,
-                        ),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(error),
-                          backgroundColor: AppStyles.errorRed,
-                        ),
-                      );
-                    }
-                  }
-                },
+                          if (error == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Friend request sent!'),
+                                backgroundColor: AppStyles.successGreen,
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(error),
+                                backgroundColor: AppStyles.errorRed,
+                              ),
+                            );
+                          }
+                        }
+                      },
                 child: const Text('Send Request'),
               ),
             ],
@@ -131,7 +141,10 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
             onPressed: _showAddFriendDialog,
             backgroundColor: AppStyles.primaryPurple,
             icon: const Icon(Icons.person_add, color: Colors.white),
-            label: const Text('Add Friend', style: TextStyle(color: Colors.white)),
+            label: const Text(
+              'Add Friend',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         );
       },
@@ -157,14 +170,19 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
       itemCount: friends.length,
       itemBuilder: (context, index) {
         final friend = friends[index];
-        final initials = friend.displayName.isNotEmpty ? friend.displayName[0].toUpperCase() : '?';
+        final initials = friend.displayName.isNotEmpty
+            ? friend.displayName[0].toUpperCase()
+            : '?';
 
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
             leading: CircleAvatar(
               backgroundColor: AppStyles.accentPink,
-              child: Text(initials, style: const TextStyle(color: Colors.white)),
+              child: Text(
+                initials,
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
             title: Text(friend.displayName, style: AppStyles.bodyLarge),
             subtitle: Text(friend.email, style: AppStyles.bodySmall),
@@ -186,7 +204,9 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
       itemCount: requests.length,
       itemBuilder: (context, index) {
         final req = requests[index];
-        final initials = req.displayName.isNotEmpty ? req.displayName[0].toUpperCase() : '?';
+        final initials = req.displayName.isNotEmpty
+            ? req.displayName[0].toUpperCase()
+            : '?';
 
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
@@ -196,24 +216,44 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
               children: [
                 CircleAvatar(
                   backgroundColor: AppStyles.primaryPurple,
-                  child: Text(initials, style: const TextStyle(color: Colors.white)),
+                  child: Text(
+                    initials,
+                    style: const TextStyle(color: Colors.white),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(req.displayName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      Text(req.email, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                      Text(
+                        req.displayName,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        req.email,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.check_circle, color: AppStyles.successGreen, size: 30),
+                  icon: const Icon(
+                    Icons.check_circle,
+                    color: AppStyles.successGreen,
+                    size: 30,
+                  ),
                   onPressed: () => provider.acceptRequest(req),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.cancel, color: AppStyles.errorRed, size: 30),
+                  icon: const Icon(
+                    Icons.cancel,
+                    color: AppStyles.errorRed,
+                    size: 30,
+                  ),
                   onPressed: () => provider.declineRequest(req.uid),
                 ),
               ],

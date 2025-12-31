@@ -7,10 +7,8 @@ import 'schedule_screen.dart';
 import 'profile_screen.dart';
 import 'promises_screen.dart';
 import 'friends_screen.dart';
-import 'settings_screen.dart';
 import 'store_inventory_screen.dart';
 import 'achievements_screen.dart';
-import 'new_promise_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeDashboardScreen extends StatefulWidget {
@@ -32,7 +30,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   Future<void> _loadLastTab() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _selectedIndex = prefs.getInt('last_tab') ?? 0; // default tab = 0 (Home)
+      _selectedIndex = prefs.getInt('last_tab') ?? 0;
     });
   }
 
@@ -42,7 +40,25 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     });
 
     final prefs = await SharedPreferences.getInstance();
-    prefs.setInt('last_tab', index); // store selected tab
+    prefs.setInt('last_tab', index);
+  }
+
+  void _navigateToProfile() {
+    Navigator.pushNamed(context, '/profile');
+  }
+
+  void _navigateToStore() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const StoreInventoryScreen()),
+    );
+  }
+
+  void _navigateToAchievements() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AchievementsScreen()),
+    );
   }
 
   // --- DELETE FUNCTION ---
@@ -122,8 +138,12 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                 ),
                 const SizedBox(height: AppStyles.paddingLarge),
 
-                // Profile Card
-                _buildProfileCard(context, isSmallScreen),
+                // Profile Card (Now acts as a Stat Summary / Welcome)
+                _buildWelcomeCard(context, isSmallScreen),
+                const SizedBox(height: AppStyles.paddingLarge),
+
+                // Gamification Quick Access (Store & Achievements)
+                _buildGamificationRow(),
                 const SizedBox(height: AppStyles.paddingXLarge),
 
                 // Promises List (Real Data)
@@ -172,7 +192,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     );
   }
 
-  Widget _buildProfileCard(BuildContext context, bool isSmallScreen) {
+  Widget _buildWelcomeCard(BuildContext context, bool isSmallScreen) {
     return Card(
       color: AppStyles.primaryPurple,
       child: Padding(
@@ -180,13 +200,17 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
         child: Row(
           children: [
             Container(
-              width: 80,
-              height: 80,
+              width: 60,
+              height: 60,
               decoration: BoxDecoration(
                 color: AppStyles.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(50),
+                borderRadius: BorderRadius.circular(30),
               ),
-              child: const Icon(Icons.person, color: Colors.white, size: 40),
+              child: const Icon(
+                Icons.auto_awesome,
+                color: Colors.white,
+                size: 30,
+              ),
             ),
             const SizedBox(width: AppStyles.paddingLarge),
             Expanded(
@@ -207,6 +231,60 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGamificationRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildQuickAccessCard(
+            icon: Icons.store,
+            title: 'Store',
+            color: AppStyles.warningOrange,
+            onTap: _navigateToStore,
+          ),
+        ),
+        const SizedBox(width: AppStyles.paddingMedium),
+        Expanded(
+          child: _buildQuickAccessCard(
+            icon: Icons.emoji_events,
+            title: 'Awards',
+            color: AppStyles.secondaryTeal,
+            onTap: _navigateToAchievements,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickAccessCard({
+    required IconData icon,
+    required String title,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(AppStyles.paddingMedium),
+        decoration: BoxDecoration(
+          color: AppStyles.white,
+          borderRadius: AppStyles.borderRadiusMediumAll,
+          boxShadow: AppStyles.shadowSmall,
+          border: Border.all(color: AppStyles.lightGray),
+        ),
+        child: Column(
+          children: [
+            CircleAvatar(
+              backgroundColor: color.withOpacity(0.1),
+              child: Icon(icon, color: color),
+            ),
+            const SizedBox(height: 8),
+            Text(title, style: AppStyles.labelLarge),
           ],
         ),
       ),
@@ -254,16 +332,27 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Only 4 main tabs now
+    final List<Widget> pages = [
+      _buildHomeTab(context),
+      const ScheduleScreen(),
+      const PromisesScreen(),
+      const FriendsScreen(),
+    ];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Promise'),
         actions: [
+          // Profile relocated to AppBar
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            onPressed: _navigateToProfile,
+          ),
           IconButton(
             icon: const Icon(Icons.add),
-            // --- UPDATED: Navigate & Auto-Refresh ---
             onPressed: () async {
               await Navigator.pushNamed(context, '/new-promise');
-              // This runs after you come back from the new promise screen
               if (mounted) {
                 Provider.of<PromiseProvider>(context, listen: false).reload();
               }
@@ -271,15 +360,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
           ),
         ],
       ),
-      body: [
-        _buildHomeTab(context),
-        const ScheduleScreen(),
-        const PromisesScreen(),
-        const FriendsScreen(),
-        const StoreInventoryScreen(),
-        const AchievementsScreen(),
-        const ProfileScreen(),
-      ][_selectedIndex],
+      body: pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
@@ -292,12 +373,6 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
           ),
           BottomNavigationBarItem(icon: Icon(Icons.list), label: 'Promises'),
           BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Friends'),
-          BottomNavigationBarItem(icon: Icon(Icons.store), label: 'Store'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.emoji_events),
-            label: 'Awards',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );

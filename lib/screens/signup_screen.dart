@@ -22,7 +22,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -44,14 +45,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) return 'Email is required';
     final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
-    if (!emailRegex.hasMatch(value)) return 'Please enter a valid email address';
+    if (!emailRegex.hasMatch(value))
+      return 'Please enter a valid email address';
     return null;
   }
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) return 'Password is required';
     if (value.length < 6) return 'Password must be at least 6 characters';
-    if (!RegExp(r'[A-Z]').hasMatch(value)) return 'At least one uppercase letter';
+    if (!RegExp(r'[A-Z]').hasMatch(value))
+      return 'At least one uppercase letter';
     if (!RegExp(r'[0-9]').hasMatch(value)) return 'At least one number';
     return null;
   }
@@ -76,7 +79,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   Future<void> _handleSignUp() async {
     if (!_agreedToTerms) {
-      _showErrorDialog('Terms & Conditions', 'You must agree to the Terms & Conditions to continue.');
+      _showErrorDialog(
+        'Terms & Conditions',
+        'You must agree to the Terms & Conditions to continue.',
+      );
       return;
     }
 
@@ -85,17 +91,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       try {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        final databaseService = Provider.of<DatabaseService>(context, listen: false); // <--- GET SERVICE
+        final databaseService = Provider.of<DatabaseService>(
+          context,
+          listen: false,
+        ); // <--- GET SERVICE
 
         final String email = _emailController.text.trim();
         final String password = _passwordController.text.trim();
-        final String displayName = "${_firstNameController.text.trim()} ${_lastNameController.text.trim()}";
+        final String displayName =
+            "${_firstNameController.text.trim()} ${_lastNameController.text.trim()}";
 
         // 1. Create User in Firebase Auth
-        final UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
+        final UserCredential userCredential = await FirebaseAuth.instance
+            .createUserWithEmailAndPassword(email: email, password: password);
 
         if (userCredential.user != null) {
           final user = userCredential.user!;
@@ -114,18 +122,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Welcome ${_firstNameController.text}! Account created.'),
+              content: Text(
+                'Welcome ${_firstNameController.text}! Account created.',
+              ),
               backgroundColor: AppStyles.successGreen,
             ),
           );
 
           Navigator.of(context).pop();
         }
-
       } on FirebaseAuthException catch (e) {
         String errorMessage = e.message ?? 'An unknown error occurred.';
-        if (e.code == 'email-already-in-use') errorMessage = 'This email is already registered.';
-        if (e.code == 'weak-password') errorMessage = 'The password provided is too weak.';
+        if (e.code == 'email-already-in-use')
+          errorMessage = 'This email is already registered.';
+        if (e.code == 'weak-password')
+          errorMessage = 'The password provided is too weak.';
 
         if (mounted) _showErrorDialog('Registration Failed', errorMessage);
       } catch (e) {
@@ -187,7 +198,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
           icon: const Icon(Icons.arrow_back, color: AppStyles.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Create Account', style: TextStyle(color: AppStyles.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Create Account',
+          style: TextStyle(color: AppStyles.white, fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -197,19 +211,29 @@ class _SignUpScreenState extends State<SignUpScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Join Promise Today', style: AppStyles.headingLarge, textAlign: TextAlign.center),
+              Text(
+                'Join Promise Today',
+                style: AppStyles.headingLarge,
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: 20),
 
               TextFormField(
                 controller: _firstNameController,
-                decoration: const InputDecoration(labelText: 'First Name', prefixIcon: Icon(Icons.person_outline)),
+                decoration: const InputDecoration(
+                  labelText: 'First Name',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
                 validator: _validateFirstName,
               ),
               const SizedBox(height: 10),
 
               TextFormField(
                 controller: _lastNameController,
-                decoration: const InputDecoration(labelText: 'Last Name', prefixIcon: Icon(Icons.person_outline)),
+                decoration: const InputDecoration(
+                  labelText: 'Last Name',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
                 validator: _validateLastName,
               ),
               const SizedBox(height: 10),
@@ -217,7 +241,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
               TextFormField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Email Address', prefixIcon: Icon(Icons.email_outlined)),
+                decoration: const InputDecoration(
+                  labelText: 'Email Address',
+                  prefixIcon: Icon(Icons.email_outlined),
+                ),
                 validator: _validateEmail,
               ),
               const SizedBox(height: 10),
@@ -229,8 +256,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   labelText: 'Password',
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                    ),
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
                   ),
                 ),
                 validator: _validatePassword,
@@ -244,8 +276,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   labelText: 'Confirm Password',
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscureConfirmPassword ? Icons.visibility_off : Icons.visibility),
-                    onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                    icon: Icon(
+                      _obscureConfirmPassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                    ),
+                    onPressed: () => setState(
+                      () => _obscureConfirmPassword = !_obscureConfirmPassword,
+                    ),
                   ),
                 ),
                 validator: _validateConfirmPassword,
@@ -256,7 +294,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 children: [
                   Checkbox(
                     value: _agreedToTerms,
-                    onChanged: (value) => setState(() => _agreedToTerms = value ?? false),
+                    onChanged: (value) =>
+                        setState(() => _agreedToTerms = value ?? false),
                     activeColor: AppStyles.primaryPurple,
                   ),
                   Expanded(
@@ -265,10 +304,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       child: RichText(
                         text: TextSpan(
                           children: [
-                            TextSpan(text: 'I agree to the ', style: AppStyles.bodySmall),
+                            TextSpan(
+                              text: 'I agree to the ',
+                              style: AppStyles.bodySmall,
+                            ),
                             TextSpan(
                               text: 'Terms & Conditions',
-                              style: AppStyles.bodySmall.copyWith(color: AppStyles.primaryPurple, fontWeight: FontWeight.bold, decoration: TextDecoration.underline),
+                              style: AppStyles.bodySmall.copyWith(
+                                color: AppStyles.primaryPurple,
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.underline,
+                              ),
                             ),
                           ],
                         ),
@@ -287,18 +333,41 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: _isLoading
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : const Text('Create Account', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Create Account',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
               const SizedBox(height: 20),
 
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('Already have an account? ', style: AppStyles.bodyMedium),
+                  Text(
+                    'Already have an account? ',
+                    style: AppStyles.bodyMedium,
+                  ),
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
-                    child: Text('Sign In', style: AppStyles.bodyMedium.copyWith(color: AppStyles.primaryPurple, fontWeight: FontWeight.bold, decoration: TextDecoration.underline)),
+                    child: Text(
+                      'Sign In',
+                      style: AppStyles.bodyMedium.copyWith(
+                        color: AppStyles.primaryPurple,
+                        fontWeight: FontWeight.bold,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
                   ),
                 ],
               ),

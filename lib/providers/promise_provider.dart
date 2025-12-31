@@ -26,7 +26,7 @@ class PromiseProvider with ChangeNotifier {
     _promisesSubscription?.cancel(); // Cancel any existing subscription
 
     _promisesSubscription = _db.getPromisesStream().listen(
-          (promiseList) {
+      (promiseList) {
         _promises = promiseList;
         _isLoading = false;
         notifyListeners();

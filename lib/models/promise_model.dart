@@ -5,8 +5,8 @@ class PromiseModel {
   final String title;
   final String description;
   final DateTime startTime; // New Field
-  final DateTime endTime;   // New Field
-  final bool isRecursive;   // New Field
+  final DateTime endTime; // New Field
+  final bool isRecursive; // New Field
   final bool isCompleted;
   final String createdBy;
   final DateTime createdAt;

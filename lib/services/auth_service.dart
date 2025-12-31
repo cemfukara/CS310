@@ -10,7 +10,10 @@ class AuthService {
   User? get currentUser => _auth.currentUser;
 
   // Sign Up
-  Future<UserCredential> signUp({required String email, required String password}) async {
+  Future<UserCredential> signUp({
+    required String email,
+    required String password,
+  }) async {
     try {
       return await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -22,7 +25,10 @@ class AuthService {
   }
 
   // Log In
-  Future<UserCredential> signIn({required String email, required String password}) async {
+  Future<UserCredential> signIn({
+    required String email,
+    required String password,
+  }) async {
     try {
       return await _auth.signInWithEmailAndPassword(
         email: email,

@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:promise/providers/auth_provider.dart';
 import 'package:promise/providers/promise_provider.dart';
 import 'package:promise/providers/theme_provider.dart'; // Kept your ThemeProvider
-import 'package:promise/models/user_model.dart'; // import if needed
+// import if needed
 import 'package:promise/providers/friends_provider.dart'; // IMPORT THIS
 
 // Services
@@ -34,12 +34,16 @@ void main() async {
           update: (_, auth, __) => FirestoreService(),
         ),
         ChangeNotifierProxyProvider<DatabaseService, PromiseProvider>(
-          create: (context) => PromiseProvider(Provider.of<DatabaseService>(context, listen: false)),
+          create: (context) => PromiseProvider(
+            Provider.of<DatabaseService>(context, listen: false),
+          ),
           update: (_, db, __) => PromiseProvider(db),
         ),
         // --- ADD THIS BLOCK ---
         ChangeNotifierProxyProvider<DatabaseService, FriendsProvider>(
-          create: (context) => FriendsProvider(Provider.of<DatabaseService>(context, listen: false)),
+          create: (context) => FriendsProvider(
+            Provider.of<DatabaseService>(context, listen: false),
+          ),
           update: (_, db, __) => FriendsProvider(db),
         ),
         // ---------------------

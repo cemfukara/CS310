@@ -26,8 +26,20 @@ abstract class DatabaseService {
   Future<UserModel?> searchUserByEmail(String email);
 
   // 3. Send/Accept/Decline
-  Future<void> sendFriendRequest(String currentUid, String currentName, String currentEmail, String targetUid);
-  Future<void> acceptFriendRequest(String currentUid, String currentName, String currentEmail, String requestUid, String requestName, String requestEmail);
+  Future<void> sendFriendRequest(
+    String currentUid,
+    String currentName,
+    String currentEmail,
+    String targetUid,
+  );
+  Future<void> acceptFriendRequest(
+    String currentUid,
+    String currentName,
+    String currentEmail,
+    String requestUid,
+    String requestName,
+    String requestEmail,
+  );
   Future<void> declineFriendRequest(String currentUid, String requestUid);
 
   // 4. Streams

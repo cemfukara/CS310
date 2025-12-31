@@ -92,16 +92,14 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 600;
 
-    final unlockedCount =
-        _achievements.where((a) => a['unlocked'] == true).length;
+    final unlockedCount = _achievements
+        .where((a) => a['unlocked'] == true)
+        .length;
     final totalCount = _achievements.length;
     final completionPercentage = ((unlockedCount / totalCount) * 100).toInt();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Achievements'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Achievements'), centerTitle: true),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(
           isSmallScreen ? AppStyles.paddingMedium : AppStyles.paddingLarge,
@@ -154,10 +152,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                       children: [
                         Column(
                           children: [
-                            Text(
-                              'Unlocked',
-                              style: AppStyles.labelMedium,
-                            ),
+                            Text('Unlocked', style: AppStyles.labelMedium),
                             Text(
                               '$unlockedCount',
                               style: AppStyles.headingMedium,
@@ -166,10 +161,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                         ),
                         Column(
                           children: [
-                            Text(
-                              'Locked',
-                              style: AppStyles.labelMedium,
-                            ),
+                            Text('Locked', style: AppStyles.labelMedium),
                             Text(
                               '${totalCount - unlockedCount}',
                               style: AppStyles.headingMedium,
@@ -223,11 +215,13 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     List<Map<String, dynamic>> filteredAchievements;
 
     if (_selectedFilter == 'Unlocked') {
-      filteredAchievements =
-          _achievements.where((a) => a['unlocked'] == true).toList();
+      filteredAchievements = _achievements
+          .where((a) => a['unlocked'] == true)
+          .toList();
     } else if (_selectedFilter == 'Locked') {
-      filteredAchievements =
-          _achievements.where((a) => a['unlocked'] == false).toList();
+      filteredAchievements = _achievements
+          .where((a) => a['unlocked'] == false)
+          .toList();
     } else {
       filteredAchievements = _achievements;
     }
@@ -236,8 +230,13 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
       return [
         Center(
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: AppStyles.paddingXLarge),
-            child: Text('No achievements to display', style: AppStyles.bodyMedium),
+            padding: const EdgeInsets.symmetric(
+              vertical: AppStyles.paddingXLarge,
+            ),
+            child: Text(
+              'No achievements to display',
+              style: AppStyles.bodyMedium,
+            ),
           ),
         ),
       ];
@@ -316,10 +315,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          achievement['name'],
-                          style: AppStyles.bodyLarge,
-                        ),
+                        Text(achievement['name'], style: AppStyles.bodyLarge),
                         const SizedBox(height: 4),
                         Text(
                           achievement['description'],
@@ -341,10 +337,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          '$progress/$target',
-                          style: AppStyles.labelSmall,
-                        ),
+                        Text('$progress/$target', style: AppStyles.labelSmall),
                       ],
                     ),
                   ),
@@ -368,10 +361,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                       ],
                     )
                   else
-                    Icon(
-                      Icons.lock,
-                      color: AppStyles.mediumGray,
-                    ),
+                    Icon(Icons.lock, color: AppStyles.mediumGray),
                 ],
               ),
             ),
@@ -400,25 +390,18 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
               ),
             ),
             const SizedBox(height: AppStyles.paddingLarge),
-            Text(
-              'Description',
-              style: AppStyles.bodyLarge,
-            ),
-            Text(
-              achievement['description'],
-              style: AppStyles.bodyMedium,
-            ),
+            Text('Description', style: AppStyles.bodyLarge),
+            Text(achievement['description'], style: AppStyles.bodyMedium),
             const SizedBox(height: AppStyles.paddingLarge),
-            Text(
-              'Progress',
-              style: AppStyles.bodyLarge,
-            ),
+            Text('Progress', style: AppStyles.bodyLarge),
             const SizedBox(height: AppStyles.paddingSmall),
             ClipRRect(
               borderRadius: AppStyles.borderRadiusSmallAll,
               child: LinearProgressIndicator(
-                value: (achievement['progress'] / achievement['target'])
-                    .clamp(0.0, 1.0),
+                value: (achievement['progress'] / achievement['target']).clamp(
+                  0.0,
+                  1.0,
+                ),
                 minHeight: 8,
                 backgroundColor: AppStyles.nearWhite,
                 valueColor: AlwaysStoppedAnimation(
@@ -444,19 +427,13 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.check_circle,
-                      color: AppStyles.successGreen,
-                    ),
+                    Icon(Icons.check_circle, color: AppStyles.successGreen),
                     const SizedBox(width: AppStyles.paddingSmall),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Unlocked',
-                            style: AppStyles.bodyLarge,
-                          ),
+                          Text('Unlocked', style: AppStyles.bodyLarge),
                           Text(
                             'On ${achievement['unlockedDate']}',
                             style: AppStyles.bodySmall,

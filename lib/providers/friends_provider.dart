@@ -47,14 +47,16 @@ class FriendsProvider with ChangeNotifier {
     try {
       final currentUser = _auth.currentUser;
       if (currentUser == null) return "Not logged in";
-      if (email.trim().toLowerCase() == currentUser.email?.toLowerCase()) return "You cannot add yourself";
+      if (email.trim().toLowerCase() == currentUser.email?.toLowerCase())
+        return "You cannot add yourself";
 
       // 1. Search for user
       final targetUser = await _db.searchUserByEmail(email.trim());
       if (targetUser == null) return "User not found";
 
       // 2. Check if already friends (simple check)
-      if (_friends.any((f) => f.uid == targetUser.uid)) return "Already friends";
+      if (_friends.any((f) => f.uid == targetUser.uid))
+        return "Already friends";
 
       // 3. Send Request
       await _db.sendFriendRequest(

@@ -59,7 +59,7 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
         'end': promise.endTime,
         'completed': promise.isCompleted,
         'is_recurring': promise.isRecursive,
-      }
+      },
     ];
   }
 
@@ -137,9 +137,9 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
     } catch (e) {
       if (mounted) {
         Navigator.pop(context); // Close Loader
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error updating: $e')));
       }
     }
   }
@@ -152,7 +152,7 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
         'start': DateTime.now(),
         'end': DateTime.now().add(const Duration(hours: 1)),
         'completed': false,
-        'is_recurring': false
+        'is_recurring': false,
       });
     });
   }
@@ -200,17 +200,24 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
   }
 
   Widget _buildNameSection() {
-    return _buildCardSection(children: [
-      const Text("Name", style: TextStyle(fontWeight: FontWeight.bold)),
-      TextField(controller: _nameController),
-    ]);
+    return _buildCardSection(
+      children: [
+        const Text("Name", style: TextStyle(fontWeight: FontWeight.bold)),
+        TextField(controller: _nameController),
+      ],
+    );
   }
 
   Widget _buildDescriptionSection() {
-    return _buildCardSection(children: [
-      const Text("Description", style: TextStyle(fontWeight: FontWeight.bold)),
-      TextField(controller: _descriptionController, maxLines: 3),
-    ]);
+    return _buildCardSection(
+      children: [
+        const Text(
+          "Description",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        TextField(controller: _descriptionController, maxLines: 3),
+      ],
+    );
   }
 
   Widget _buildSlotsSection() {
@@ -218,10 +225,16 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text("Time Slots", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          IconButton(onPressed: _addSlot, icon: const Icon(Icons.add_circle, color: AppStyles.primaryPurple)),
+          const Text(
+            "Time Slots",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          IconButton(
+            onPressed: _addSlot,
+            icon: const Icon(Icons.add_circle, color: AppStyles.primaryPurple),
+          ),
         ],
-      )
+      ),
     ];
 
     for (int i = 0; i < dynamicSlots.length; i++) {
@@ -229,46 +242,57 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
       final start = slot['start'] as DateTime?;
       final end = slot['end'] as DateTime?;
 
-      final startText = start != null ? intl.DateFormat(fullDateTimeFormat).format(start) : "Select Start";
-      final endText = end != null ? intl.DateFormat(fullDateTimeFormat).format(end) : "Select End";
+      final startText = start != null
+          ? intl.DateFormat(fullDateTimeFormat).format(start)
+          : "Select Start";
+      final endText = end != null
+          ? intl.DateFormat(fullDateTimeFormat).format(end)
+          : "Select End";
 
       children.add(
-          Container(
-            margin: const EdgeInsets.only(top: 10),
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text("Slot ${i + 1}", style: const TextStyle(fontWeight: FontWeight.bold)),
-                    if (i > 0)
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                        onPressed: () => _removeSlot(i),
+        Container(
+          margin: const EdgeInsets.only(top: 10),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Slot ${i + 1}",
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  if (i > 0)
+                    IconButton(
+                      icon: const Icon(
+                        Icons.delete,
+                        color: Colors.red,
+                        size: 20,
                       ),
-                  ],
-                ),
-                const SizedBox(height: 5),
-                ListTile(
-                  title: Text("Start: $startText"),
-                  trailing: const Icon(Icons.calendar_today, size: 16),
-                  dense: true,
-                  onTap: () => _pickFullDateTime(i, 'start'),
-                ),
-                ListTile(
-                  title: Text("End:   $endText"),
-                  trailing: const Icon(Icons.calendar_today, size: 16),
-                  dense: true,
-                  onTap: () => _pickFullDateTime(i, 'end'),
-                ),
-              ],
-            ),
-          )
+                      onPressed: () => _removeSlot(i),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 5),
+              ListTile(
+                title: Text("Start: $startText"),
+                trailing: const Icon(Icons.calendar_today, size: 16),
+                dense: true,
+                onTap: () => _pickFullDateTime(i, 'start'),
+              ),
+              ListTile(
+                title: Text("End:   $endText"),
+                trailing: const Icon(Icons.calendar_today, size: 16),
+                dense: true,
+                onTap: () => _pickFullDateTime(i, 'end'),
+              ),
+            ],
+          ),
+        ),
       );
     }
     return _buildCardSection(children: children);
@@ -281,9 +305,18 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
     );
   }
 
@@ -330,9 +363,14 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppStyles.primaryPurple,
                   minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: const Text("Save Changes", style: TextStyle(color: Colors.white, fontSize: 16)),
+                child: const Text(
+                  "Save Changes",
+                  style: TextStyle(color: Colors.white, fontSize: 16),
+                ),
               ),
             ),
             const SizedBox(height: 40),
