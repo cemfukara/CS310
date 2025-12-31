@@ -22,6 +22,7 @@ class FirestoreService implements DatabaseService {
     required bool isRecursive,
     required String category,
     required int priority,
+    String? sharedBy,
   }) async {
     if (_userId == null) {
       throw Exception("User must be logged in to create a promise");
@@ -37,6 +38,7 @@ class FirestoreService implements DatabaseService {
       'createdAt': FieldValue.serverTimestamp(),
       'category': category,
       'priority': priority,
+      'sharedBy': sharedBy,
     });
   }
 
@@ -318,6 +320,7 @@ class FirestoreService implements DatabaseService {
       isRecursive: false,
       category: request.category,
       priority: request.priority,
+      sharedBy: request.senderName, // Pass sender name!
     );
 
     // 2. Delete the request

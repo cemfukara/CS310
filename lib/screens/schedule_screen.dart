@@ -23,59 +23,131 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     _currentMonth = DateTime.now();
   }
 
-  int _getDaysInMonth(DateTime date) => DateTime(date.year, date.month + 1, 0).day;
+  int _getDaysInMonth(DateTime date) =>
+      DateTime(date.year, date.month + 1, 0).day;
 
   int _getFirstWeekday(DateTime date) {
     final weekday = DateTime(date.year, date.month, 1).weekday;
     return weekday == 7 ? 0 : weekday;
   }
 
-  bool _isSameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
-  List<PromiseModel> _getEventsForDate(List<PromiseModel> allPromises, DateTime date) {
+  List<PromiseModel> _getEventsForDate(
+    List<PromiseModel> allPromises,
+    DateTime date,
+  ) {
     return allPromises.where((promise) {
       if (!promise.isRecursive) {
         return _isSameDay(promise.startTime, date);
       }
-      final isAfterStart = date.isAtSameMomentAs(promise.startTime) || date.isAfter(promise.startTime);
+      final isAfterStart =
+          date.isAtSameMomentAs(promise.startTime) ||
+          date.isAfter(promise.startTime);
       final isSameWeekday = promise.startTime.weekday == date.weekday;
       return isAfterStart && isSameWeekday;
     }).toList();
   }
 
   Widget _buildEventItem(PromiseModel promise) {
-    final timeStr = '${DateFormat('HH:mm').format(promise.startTime)} - ${DateFormat('HH:mm').format(promise.endTime)}';
-    final color = promise.isCompleted ? AppStyles.successGreen : AppStyles.primaryPurple;
+    final timeStr =
+        '${DateFormat('HH:mm').format(promise.startTime)} - ${DateFormat('HH:mm').format(promise.endTime)}';
+    final color = promise.isCompleted
+        ? AppStyles.successGreen
+        : AppStyles.primaryPurple;
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppStyles.paddingMedium),
         child: Row(
           children: [
-            Container(width: 4, height: 50, decoration: BoxDecoration(color: color, borderRadius: const BorderRadius.all(Radius.circular(2)))),
+            Container(
+              width: 4,
+              height: 50,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: const BorderRadius.all(Radius.circular(2)),
+              ),
+            ),
             const SizedBox(width: AppStyles.paddingMedium),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(promise.title, style: AppStyles.bodyLarge.copyWith(decoration: promise.isCompleted ? TextDecoration.lineThrough : null), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(
+                    promise.title,
+                    style: AppStyles.bodyLarge.copyWith(
+                      decoration: promise.isCompleted
+                          ? TextDecoration.lineThrough
+                          : null,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(Icons.access_time, size: 14, color: AppStyles.mediumGray),
+                      Icon(
+                        Icons.access_time,
+                        size: 14,
+                        color: AppStyles.mediumGray,
+                      ),
                       const SizedBox(width: 4),
                       Text(timeStr, style: AppStyles.bodySmall),
-                      if (promise.isRecursive) ...[const SizedBox(width: 8), Icon(Icons.repeat, size: 14, color: AppStyles.mediumGray)],
+                      if (promise.isRecursive) ...[
+                        const SizedBox(width: 8),
+                        Icon(
+                          Icons.repeat,
+                          size: 14,
+                          color: AppStyles.mediumGray,
+                        ),
+                      ],
                     ],
                   ),
+                  if (promise.sharedBy != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.person_outline,
+                          size: 14,
+                          color: AppStyles.primaryPurple,
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            'Shared by ${promise.sharedBy}',
+                            style: AppStyles.bodySmall.copyWith(
+                              fontStyle: FontStyle.italic,
+                              color: AppStyles.primaryPurple,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
             IconButton(
-              icon: Icon(promise.isCompleted ? Icons.check_circle : Icons.radio_button_unchecked, color: promise.isCompleted ? AppStyles.successGreen : AppStyles.mediumGray),
-              onPressed: promise.isCompleted ? null : () {
-                Provider.of<PromiseProvider>(context, listen: false).toggleStatus(promise.id, !promise.isCompleted);
-              },
+              icon: Icon(
+                promise.isCompleted
+                    ? Icons.check_circle
+                    : Icons.radio_button_unchecked,
+                color: promise.isCompleted
+                    ? AppStyles.successGreen
+                    : AppStyles.mediumGray,
+              ),
+              onPressed: promise.isCompleted
+                  ? null
+                  : () {
+                      Provider.of<PromiseProvider>(
+                        context,
+                        listen: false,
+                      ).toggleStatus(promise.id, !promise.isCompleted);
+                    },
             ),
           ],
         ),
@@ -93,13 +165,29 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-              .map((day) => Expanded(child: Text(day, textAlign: TextAlign.center, style: AppStyles.labelMedium.copyWith(color: AppStyles.mediumGray)))).toList(),
+              .map(
+                (day) => Expanded(
+                  child: Text(
+                    day,
+                    textAlign: TextAlign.center,
+                    style: AppStyles.labelMedium.copyWith(
+                      color: AppStyles.mediumGray,
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
         ),
         const SizedBox(height: AppStyles.paddingSmall),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 7, childAspectRatio: 1.2, mainAxisSpacing: 4, crossAxisSpacing: 4),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 7,
+            childAspectRatio: 1.2,
+            mainAxisSpacing: 4,
+            crossAxisSpacing: 4,
+          ),
           itemCount: totalCells,
           itemBuilder: (context, index) {
             if (index < firstWeekday) return const SizedBox.shrink();
@@ -112,12 +200,30 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               onTap: () => setState(() => _selectedDate = date),
               child: Container(
                 decoration: BoxDecoration(
-                  color: isSelected ? AppStyles.primaryPurple : isToday ? AppStyles.primaryPurple.withOpacity(0.2) : AppStyles.nearWhite,
+                  color: isSelected
+                      ? AppStyles.primaryPurple
+                      : isToday
+                      ? AppStyles.primaryPurple.withOpacity(0.2)
+                      : AppStyles.nearWhite,
                   borderRadius: AppStyles.borderRadiusSmallAll,
-                  border: Border.all(color: isToday ? AppStyles.primaryPurple : AppStyles.lightGray, width: 1),
+                  border: Border.all(
+                    color: isToday
+                        ? AppStyles.primaryPurple
+                        : AppStyles.lightGray,
+                    width: 1,
+                  ),
                 ),
                 child: Center(
-                  child: Text('$day', style: AppStyles.bodyMedium.copyWith(color: isSelected ? AppStyles.white : isToday ? AppStyles.primaryPurple : AppStyles.darkGray)),
+                  child: Text(
+                    '$day',
+                    style: AppStyles.bodyMedium.copyWith(
+                      color: isSelected
+                          ? AppStyles.white
+                          : isToday
+                          ? AppStyles.primaryPurple
+                          : AppStyles.darkGray,
+                    ),
+                  ),
                 ),
               ),
             );
@@ -131,8 +237,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   Widget build(BuildContext context) {
     return Consumer<PromiseProvider>(
       builder: (context, promiseProvider, child) {
-        final dailyEvents = _getEventsForDate(promiseProvider.promises, _selectedDate);
-        dailyEvents.sort((a, b) => a.startTime.hour.compareTo(b.startTime.hour));
+        final dailyEvents = _getEventsForDate(
+          promiseProvider.promises,
+          _selectedDate,
+        );
+        dailyEvents.sort(
+          (a, b) => a.startTime.hour.compareTo(b.startTime.hour),
+        );
 
         return Scaffold(
           appBar: AppBar(
@@ -149,7 +260,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 onPressed: () async {
                   await Navigator.pushNamed(context, '/new-promise');
                   if (mounted) {
-                    Provider.of<PromiseProvider>(context, listen: false).reload();
+                    Provider.of<PromiseProvider>(
+                      context,
+                      listen: false,
+                    ).reload();
                   }
                 },
               ),
@@ -162,20 +276,52 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    IconButton(icon: const Icon(Icons.chevron_left), onPressed: () => setState(() => _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1))),
-                    Text(DateFormat('MMMM yyyy').format(_currentMonth), style: AppStyles.headingSmall),
-                    IconButton(icon: const Icon(Icons.chevron_right), onPressed: () => setState(() => _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1))),
+                    IconButton(
+                      icon: const Icon(Icons.chevron_left),
+                      onPressed: () => setState(
+                        () => _currentMonth = DateTime(
+                          _currentMonth.year,
+                          _currentMonth.month - 1,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      DateFormat('MMMM yyyy').format(_currentMonth),
+                      style: AppStyles.headingSmall,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.chevron_right),
+                      onPressed: () => setState(
+                        () => _currentMonth = DateTime(
+                          _currentMonth.year,
+                          _currentMonth.month + 1,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppStyles.paddingLarge),
                 _buildCalendarGrid(),
                 const SizedBox(height: AppStyles.paddingXLarge),
-                Text('Events for ${DateFormat('MMMM d').format(_selectedDate)}', style: AppStyles.headingSmall),
+                Text(
+                  'Events for ${DateFormat('MMMM d').format(_selectedDate)}',
+                  style: AppStyles.headingSmall,
+                ),
                 const SizedBox(height: AppStyles.paddingMedium),
                 if (dailyEvents.isEmpty)
-                  const Center(child: Padding(padding: EdgeInsets.all(20), child: Text("No events scheduled.")))
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Text("No events scheduled."),
+                    ),
+                  )
                 else
-                  ...dailyEvents.map((event) => Padding(padding: const EdgeInsets.only(bottom: 12.0), child: _buildEventItem(event))),
+                  ...dailyEvents.map(
+                    (event) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: _buildEventItem(event),
+                    ),
+                  ),
               ],
             ),
           ),

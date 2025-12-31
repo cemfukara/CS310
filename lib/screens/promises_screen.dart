@@ -14,7 +14,13 @@ class PromisesScreen extends StatefulWidget {
 class _PromisesScreenState extends State<PromisesScreen> {
   String _selectedCategory = 'All';
 
-  final List<String> _categories = ['All', 'Work', 'Personal', 'Health', 'Family'];
+  final List<String> _categories = [
+    'All',
+    'Work',
+    'Personal',
+    'Health',
+    'Family',
+  ];
 
   String _getStatus(PromiseModel promise) {
     if (promise.isCompleted) return 'Completed';
@@ -30,19 +36,27 @@ class _PromisesScreenState extends State<PromisesScreen> {
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'Completed': return AppStyles.successGreen;
-      case 'In Progress': return AppStyles.infoBlue;
-      case 'Overdue': return AppStyles.errorRed;
-      default: return AppStyles.warningOrange;
+      case 'Completed':
+        return AppStyles.successGreen;
+      case 'In Progress':
+        return AppStyles.infoBlue;
+      case 'Overdue':
+        return AppStyles.errorRed;
+      default:
+        return AppStyles.warningOrange;
     }
   }
 
   IconData _getStatusIcon(String status) {
     switch (status) {
-      case 'Completed': return Icons.check_circle;
-      case 'In Progress': return Icons.schedule;
-      case 'Overdue': return Icons.error_outline;
-      default: return Icons.pending;
+      case 'Completed':
+        return Icons.check_circle;
+      case 'In Progress':
+        return Icons.schedule;
+      case 'Overdue':
+        return Icons.error_outline;
+      default:
+        return Icons.pending;
     }
   }
 
@@ -61,17 +75,26 @@ class _PromisesScreenState extends State<PromisesScreen> {
 
         for (var p in allPromises) {
           String status = _getStatus(p);
-          if (status == 'Completed') completedCount++;
-          else if (status == 'In Progress') inProgressCount++;
-          else if (status == 'Overdue') overdueCount++;
+          if (status == 'Completed')
+            completedCount++;
+          else if (status == 'In Progress')
+            inProgressCount++;
+          else if (status == 'Overdue')
+            overdueCount++;
         }
 
         final categoryFilteredPromises = _selectedCategory == 'All'
             ? allPromises
-            : allPromises.where((p) => p.category == _selectedCategory).toList();
+            : allPromises
+                  .where((p) => p.category == _selectedCategory)
+                  .toList();
 
-        final activePromises = categoryFilteredPromises.where((p) => !p.isCompleted).toList();
-        final completedPromises = categoryFilteredPromises.where((p) => p.isCompleted).toList();
+        final activePromises = categoryFilteredPromises
+            .where((p) => !p.isCompleted)
+            .toList();
+        final completedPromises = categoryFilteredPromises
+            .where((p) => p.isCompleted)
+            .toList();
 
         return Scaffold(
           appBar: AppBar(
@@ -88,7 +111,10 @@ class _PromisesScreenState extends State<PromisesScreen> {
                 onPressed: () async {
                   await Navigator.pushNamed(context, '/new-promise');
                   if (mounted) {
-                    Provider.of<PromiseProvider>(context, listen: false).reload();
+                    Provider.of<PromiseProvider>(
+                      context,
+                      listen: false,
+                    ).reload();
                   }
                 },
               ),
@@ -101,7 +127,9 @@ class _PromisesScreenState extends State<PromisesScreen> {
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: EdgeInsets.all(
-                isSmallScreen ? AppStyles.paddingMedium : AppStyles.paddingLarge,
+                isSmallScreen
+                    ? AppStyles.paddingMedium
+                    : AppStyles.paddingLarge,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -117,7 +145,9 @@ class _PromisesScreenState extends State<PromisesScreen> {
                         final isSelected = category == _selectedCategory;
 
                         return Padding(
-                          padding: const EdgeInsets.only(right: AppStyles.paddingSmall),
+                          padding: const EdgeInsets.only(
+                            right: AppStyles.paddingSmall,
+                          ),
                           child: FilterChip(
                             label: Text(category),
                             selected: isSelected,
@@ -129,7 +159,9 @@ class _PromisesScreenState extends State<PromisesScreen> {
                             backgroundColor: AppStyles.nearWhite,
                             selectedColor: AppStyles.primaryPurple,
                             labelStyle: AppStyles.labelMedium.copyWith(
-                              color: isSelected ? AppStyles.white : AppStyles.darkGray,
+                              color: isSelected
+                                  ? AppStyles.white
+                                  : AppStyles.darkGray,
                             ),
                           ),
                         );
@@ -176,11 +208,20 @@ class _PromisesScreenState extends State<PromisesScreen> {
                   const SizedBox(height: AppStyles.paddingMedium),
 
                   if (promiseProvider.isLoading)
-                    const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
                   else if (activePromises.isEmpty)
                     _buildEmptySection("No active promises.")
                   else
-                    ..._buildRealPromisesList(context, activePromises, promiseProvider),
+                    ..._buildRealPromisesList(
+                      context,
+                      activePromises,
+                      promiseProvider,
+                    ),
 
                   const SizedBox(height: AppStyles.paddingXLarge),
 
@@ -192,7 +233,11 @@ class _PromisesScreenState extends State<PromisesScreen> {
                     if (completedPromises.isEmpty)
                       _buildEmptySection("No completed promises yet.")
                     else
-                      ..._buildRealPromisesList(context, completedPromises, promiseProvider),
+                      ..._buildRealPromisesList(
+                        context,
+                        completedPromises,
+                        promiseProvider,
+                      ),
 
                   const SizedBox(height: AppStyles.paddingXXLarge),
                 ],
@@ -232,7 +277,11 @@ class _PromisesScreenState extends State<PromisesScreen> {
             const SizedBox(height: AppStyles.paddingSmall),
             Text(value, style: AppStyles.headingSmall.copyWith(color: color)),
             const SizedBox(height: 4),
-            Text(label, style: AppStyles.bodySmall, textAlign: TextAlign.center),
+            Text(
+              label,
+              style: AppStyles.bodySmall,
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),
@@ -240,10 +289,10 @@ class _PromisesScreenState extends State<PromisesScreen> {
   }
 
   List<Widget> _buildRealPromisesList(
-      BuildContext context,
-      List<PromiseModel> promises,
-      PromiseProvider provider,
-      ) {
+    BuildContext context,
+    List<PromiseModel> promises,
+    PromiseProvider provider,
+  ) {
     return promises.map((promise) {
       final status = _getStatus(promise);
       final statusColor = _getStatusColor(status);
@@ -262,22 +311,60 @@ class _PromisesScreenState extends State<PromisesScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(promise.title, style: AppStyles.bodyLarge.copyWith(
-                        decoration: promise.isCompleted ? TextDecoration.lineThrough : null,
-                        color: promise.isCompleted ? AppStyles.mediumGray : AppStyles.darkGray,
-                      )),
+                      Text(
+                        promise.title,
+                        style: AppStyles.bodyLarge.copyWith(
+                          decoration: promise.isCompleted
+                              ? TextDecoration.lineThrough
+                              : null,
+                          color: promise.isCompleted
+                              ? AppStyles.mediumGray
+                              : AppStyles.darkGray,
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text(promise.category, style: AppStyles.bodySmall),
+                      Row(
+                        children: [
+                          Text(promise.category, style: AppStyles.bodySmall),
+                          if (promise.sharedBy != null) ...[
+                            const SizedBox(width: 8),
+                            Text("|", style: AppStyles.bodySmall),
+                            const SizedBox(width: 8),
+                            const Icon(
+                              Icons.person_outline,
+                              size: 12,
+                              color: AppStyles.primaryPurple,
+                            ),
+                            const SizedBox(width: 2),
+                            Flexible(
+                              child: Text(
+                                'Shared by ${promise.sharedBy}',
+                                style: AppStyles.bodySmall.copyWith(
+                                  color: AppStyles.primaryPurple,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ],
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: AppStyles.paddingSmall, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppStyles.paddingSmall,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.1),
                     borderRadius: AppStyles.borderRadiusSmallAll,
                   ),
-                  child: Text(status, style: AppStyles.labelSmall.copyWith(color: statusColor)),
+                  child: Text(
+                    status,
+                    style: AppStyles.labelSmall.copyWith(color: statusColor),
+                  ),
                 ),
                 const SizedBox(width: AppStyles.paddingSmall),
                 IconButton(
@@ -286,11 +373,15 @@ class _PromisesScreenState extends State<PromisesScreen> {
                   onPressed: promise.isCompleted
                       ? null
                       : () async {
-                    await Navigator.pushNamed(context, '/edit-promise', arguments: promise);
-                    if (mounted) {
-                      provider.reload();
-                    }
-                  },
+                          await Navigator.pushNamed(
+                            context,
+                            '/edit-promise',
+                            arguments: promise,
+                          );
+                          if (mounted) {
+                            provider.reload();
+                          }
+                        },
                   tooltip: 'Edit Promise',
                 ),
               ],

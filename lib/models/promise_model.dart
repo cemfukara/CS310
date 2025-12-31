@@ -12,6 +12,7 @@ class PromiseModel {
   final DateTime createdAt;
   final String category;
   final int priority;
+  final String? sharedBy;
 
   PromiseModel({
     required this.id,
@@ -25,6 +26,7 @@ class PromiseModel {
     required this.createdAt,
     this.category = 'General',
     this.priority = 1,
+    this.sharedBy,
   });
 
   /// Helper to calculate endTime dynamically
@@ -51,6 +53,7 @@ class PromiseModel {
           : DateTime.now(),
       category: data['category'] ?? 'General',
       priority: data['priority'] ?? 1,
+      sharedBy: data['sharedBy'],
     );
   }
 
@@ -67,6 +70,7 @@ class PromiseModel {
       'createdAt': Timestamp.fromDate(createdAt),
       'category': category,
       'priority': priority,
+      'sharedBy': sharedBy,
     };
   }
 
@@ -82,6 +86,7 @@ class PromiseModel {
     DateTime? createdAt,
     String? category,
     int? priority,
+    String? sharedBy,
   }) {
     return PromiseModel(
       id: id ?? this.id,
@@ -95,6 +100,7 @@ class PromiseModel {
       createdAt: createdAt ?? this.createdAt,
       category: category ?? this.category,
       priority: priority ?? this.priority,
+      sharedBy: sharedBy ?? this.sharedBy,
     );
   }
 }

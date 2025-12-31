@@ -13,6 +13,7 @@ abstract class DatabaseService {
     required bool isRecursive,
     required String category,
     required int priority,
+    String? sharedBy,
   });
 
   Stream<List<PromiseModel>> getPromisesStream();
