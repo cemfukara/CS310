@@ -18,7 +18,7 @@ class FirestoreService implements DatabaseService {
     required String title,
     required String description,
     required DateTime startTime,
-    required DateTime endTime,
+    required int durationMinutes, // User's preference
     required bool isRecursive,
     required String category,
     required int priority,
@@ -30,7 +30,7 @@ class FirestoreService implements DatabaseService {
       'title': title,
       'description': description,
       'startTime': Timestamp.fromDate(startTime),
-      'endTime': Timestamp.fromDate(endTime),
+      'durationMinutes': durationMinutes, // Saved as duration
       'isRecursive': isRecursive,
       'isCompleted': false,
       'createdBy': _userId,
@@ -68,18 +68,16 @@ class FirestoreService implements DatabaseService {
     await _db.collection('promises').doc(promiseId).delete();
   }
 
-  // --- NEW FRIEND METHODS ---
-
+  // --- FRIEND METHODS (Standard) ---
   @override
   Future<void> createPublicUser(
     String uid,
     String email,
     String displayName,
   ) async {
-    // Create a searchable document
     await _db.collection('users').doc(uid).set({
       'uid': uid,
-      'createdBy': uid, // <--- ADDED: Critical for Security Rules
+      'createdBy': uid,
       'email': email,
       'displayName': displayName,
       'searchEmail': email.toLowerCase(),
@@ -93,7 +91,6 @@ class FirestoreService implements DatabaseService {
         .where('email', isEqualTo: email)
         .limit(1)
         .get();
-
     if (snapshot.docs.isNotEmpty) {
       return UserModel.fromMap(snapshot.docs.first.data());
     }
@@ -107,7 +104,6 @@ class FirestoreService implements DatabaseService {
     String currentEmail,
     String targetUid,
   ) async {
-    // Add to target's "friend_requests" subcollection
     await _db
         .collection('users')
         .doc(targetUid)
@@ -131,8 +127,6 @@ class FirestoreService implements DatabaseService {
     String requestEmail,
   ) async {
     final batch = _db.batch();
-
-    // 1. Add B to A's friends
     final myFriendRef = _db
         .collection('users')
         .doc(currentUid)
@@ -144,8 +138,6 @@ class FirestoreService implements DatabaseService {
       'email': requestEmail,
       'since': FieldValue.serverTimestamp(),
     });
-
-    // 2. Add A to B's friends
     final theirFriendRef = _db
         .collection('users')
         .doc(requestUid)
@@ -157,15 +149,12 @@ class FirestoreService implements DatabaseService {
       'email': currentEmail,
       'since': FieldValue.serverTimestamp(),
     });
-
-    // 3. Delete the request
     final requestRef = _db
         .collection('users')
         .doc(currentUid)
         .collection('friend_requests')
         .doc(requestUid);
     batch.delete(requestRef);
-
     await batch.commit();
   }
 
@@ -213,13 +202,9 @@ class FirestoreService implements DatabaseService {
   }
 
   // --- GAMIFICATION IMPLEMENTATION ---
-
   @override
   Stream<UserStatsModel> getUserStatsStream() {
     if (_userId == null) return const Stream.empty();
-
-    // Listen to the 'stats' subcollection or a specific document for stats
-    // We'll store stats in users/{uid}/gamification/stats
     return _db
         .collection('users')
         .doc(_userId)
@@ -227,19 +212,15 @@ class FirestoreService implements DatabaseService {
         .doc('stats')
         .snapshots()
         .map((doc) {
-          if (!doc.exists) {
-            // value if not exists
-            return UserStatsModel();
-          }
+          if (!doc.exists) return UserStatsModel();
           return UserStatsModel.fromMap(doc.data()!);
         });
   }
 
   @override
   Future<void> updateUserStats(UserStatsModel stats) async {
-    if (_userId == null) {
+    if (_userId == null)
       throw Exception("User must be logged in to update stats");
-    }
     await _db
         .collection('users')
         .doc(_userId)
@@ -250,17 +231,13 @@ class FirestoreService implements DatabaseService {
 
   @override
   Future<void> updateCoins(int amount) async {
-    if (_userId == null) {
+    if (_userId == null)
       throw Exception("User must be logged in to update coins");
-    }
-
     final ref = _db
         .collection('users')
         .doc(_userId)
         .collection('gamification')
         .doc('stats');
-
-    // Use a transaction or FieldValue.increment for safety
     await ref.set({
       'coins': FieldValue.increment(amount),
     }, SetOptions(merge: true));
@@ -269,13 +246,11 @@ class FirestoreService implements DatabaseService {
   @override
   Future<void> unlockItem(String itemId) async {
     if (_userId == null) return;
-
     final ref = _db
         .collection('users')
         .doc(_userId)
         .collection('gamification')
         .doc('stats');
-
     await ref.set({
       'inventory': FieldValue.arrayUnion([itemId]),
     }, SetOptions(merge: true));
@@ -284,19 +259,17 @@ class FirestoreService implements DatabaseService {
   @override
   Future<void> unlockAchievement(String achievementId) async {
     if (_userId == null) return;
-
     final ref = _db
         .collection('users')
         .doc(_userId)
         .collection('gamification')
         .doc('stats');
-
     await ref.set({
       'achievements': FieldValue.arrayUnion([achievementId]),
     }, SetOptions(merge: true));
   }
 
-  // --- PROMISE REQUESTS IMPLEMENTATION ---
+  // --- PROMISE REQUESTS IMPLEMENTATION (New) ---
 
   @override
   Future<void> sendPromiseRequest(
@@ -304,21 +277,16 @@ class FirestoreService implements DatabaseService {
     PromiseRequestModel request,
   ) async {
     if (_userId == null) return;
-
-    // Add to target's "promise_requests" subcollection
     await _db
         .collection('users')
         .doc(targetUid)
         .collection('promise_requests')
-        .add(
-          request.toMap(),
-        ); // Firestore generates ID, or we can use request.id if set
+        .add(request.toMap());
   }
 
   @override
   Stream<List<PromiseRequestModel>> getPromiseRequestsStream() {
     if (_userId == null) return const Stream.empty();
-
     return _db
         .collection('users')
         .doc(_userId)
@@ -336,14 +304,18 @@ class FirestoreService implements DatabaseService {
   Future<void> acceptPromiseRequest(PromiseRequestModel request) async {
     if (_userId == null) return;
 
-    // 1. Create the promise for the current user
-    // We reuse the existing createPromise logic
+    // --- ADAPTED: Calculate duration from request's times ---
+    final int duration = request.endTime
+        .difference(request.startTime)
+        .inMinutes;
+
+    // 1. Create the promise locally using Duration logic
     await createPromise(
       title: request.title,
       description: request.description,
       startTime: request.startTime,
-      endTime: request.endTime,
-      isRecursive: false, // Requests usually one-time, unless model supports it
+      durationMinutes: duration, // Correctly adapted
+      isRecursive: false,
       category: request.category,
       priority: request.priority,
     );
@@ -355,7 +327,6 @@ class FirestoreService implements DatabaseService {
   @override
   Future<void> declinePromiseRequest(String requestId) async {
     if (_userId == null) return;
-
     await _db
         .collection('users')
         .doc(_userId)

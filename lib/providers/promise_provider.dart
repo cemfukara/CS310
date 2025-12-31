@@ -1,4 +1,4 @@
-import 'dart:async'; // Required for StreamSubscription
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/promise_model.dart';
 import '../services/database_service.dart';
@@ -10,7 +10,6 @@ class PromiseProvider with ChangeNotifier {
   List<PromiseModel> _promises = [];
   bool _isLoading = true;
 
-  // Constructor receives the DB service
   PromiseProvider(this._db) {
     _listenToPromises();
   }
@@ -23,15 +22,12 @@ class PromiseProvider with ChangeNotifier {
   List<PromiseModel> get promises => _promises;
   bool get isLoading => _isLoading;
 
-  // Listen to real-time updates from Firestore
   void _listenToPromises() {
     _isLoading = true;
     notifyListeners();
-
-    _promisesSubscription?.cancel(); // Cancel any existing subscription
-
+    _promisesSubscription?.cancel();
     _promisesSubscription = _db.getPromisesStream().listen(
-      (promiseList) {
+          (promiseList) {
         _promises = promiseList;
         _isLoading = false;
         notifyListeners();
@@ -44,18 +40,17 @@ class PromiseProvider with ChangeNotifier {
     );
   }
 
-  // RELOAD METHOD
   Future<void> reload() async {
     _listenToPromises();
     await Future.delayed(const Duration(milliseconds: 500));
   }
 
-  // CREATE
+  // --- UPDATED ADD METHOD ---
   Future<void> addPromise({
     required String title,
     required String description,
     required DateTime startTime,
-    required DateTime endTime,
+    required int durationMinutes, // Updated
     required bool isRecursive,
     required String category,
     required int priority,
@@ -64,18 +59,14 @@ class PromiseProvider with ChangeNotifier {
       title: title,
       description: description,
       startTime: startTime,
-      endTime: endTime,
+      durationMinutes: durationMinutes, // Updated
       isRecursive: isRecursive,
       category: category,
       priority: priority,
     );
-
-    // Check for "First Promise" achievement
-    // We can just try to unlock it every time, the backend handles duplicates via arrayUnion/set
     await _db.unlockAchievement('first_promise');
   }
 
-  // UPDATE
   Future<void> updatePromise(PromiseModel promise) async {
     try {
       await _db.updatePromise(promise);
@@ -85,23 +76,17 @@ class PromiseProvider with ChangeNotifier {
     }
   }
 
-  // --- DELETE (FIXED: Optimistic Update) ---
   Future<void> deletePromise(String id) async {
     try {
-      // 1. Remove from local list IMMEDIATELY so it vanishes from screen
       _promises.removeWhere((p) => p.id == id);
       notifyListeners();
-
-      // 2. Then Delete from Database
       await _db.deletePromise(id);
     } catch (e) {
       print("Error deleting promise: $e");
-      // If there was an error, re-fetch the list to bring it back
       _listenToPromises();
     }
   }
 
-  // TOGGLE STATUS
   Future<void> toggleStatus(String id, bool newStatus) async {
     try {
       final index = _promises.indexWhere((p) => p.id == id);
@@ -109,22 +94,14 @@ class PromiseProvider with ChangeNotifier {
         final promise = _promises[index];
         final updatedPromise = promise.copyWith(isCompleted: newStatus);
 
-        // Optimistic update
         _promises[index] = updatedPromise;
         notifyListeners();
 
         await _db.updatePromise(updatedPromise);
         await _db.updatePromise(updatedPromise);
 
-        // --- GAMIFICATION REWARD ---
         if (newStatus == true) {
-          // Promise Completed! Award 50 coins.
           await _db.updateCoins(50);
-
-          // Check for Promise Master achievement (50 promises)
-          // Ideally we store stats count in UserStatsModel and check there,
-          // For now we can just blindly increment or check userStats if we had access.
-          // Let's just award coins for now to keep it simple and robust.
         }
       }
     } catch (e) {

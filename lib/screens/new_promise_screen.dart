@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' as intl;
-import 'package:provider/provider.dart'; // Import Provider
+import 'package:provider/provider.dart';
 import '../utils/app_styles.dart';
 import '../providers/promise_provider.dart';
 import '../providers/friends_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/database_service.dart';
-import '../models/promise_request_model.dart';
+import '../models/promise_request_model.dart'; // Ensure this model exists or is created
 import '../models/user_model.dart';
 
-/// New Promise Screen - Create a new promise with slots and difficulty settings
 class NewPromiseScreen extends StatefulWidget {
   const NewPromiseScreen({super.key});
 
@@ -18,24 +17,25 @@ class NewPromiseScreen extends StatefulWidget {
 }
 
 class _NewPromiseScreenState extends State<NewPromiseScreen> {
-  // --- DATE FORMAT CONSTANTS ---
   static const String fullDateTimeFormat = 'dd/MMM/yy HH:mm';
   static const String dayTimeFormat = 'EEE HH:mm';
 
-  // --- STATE VARIABLES ---
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+
   bool isRecurring = false;
-  bool addSlotsLater = false;
-  String selectedDifficultyPeriod = 'Total';
   int difficultyStars = 3;
 
-  Map<String, int> difficultyTime = {'hours': 0, 'minutes': 0};
-  List<Map<String, DateTime?>> dynamicSlots = [
-    {'start': null, 'end': null},
+  // --- CATEGORY STATE ---
+  String _selectedCategory = 'Personal';
+  final List<String> _categories = ['Work', 'Personal', 'Health', 'Family'];
+
+  // --- SLOTS (User's Duration Structure) ---
+  List<Map<String, dynamic>> dynamicSlots = [
+    {'start': null, 'duration': {'hours': 1, 'minutes': 0}},
   ];
 
-  // --- FRIEND SHARING ---
+  // --- FRIEND SHARING (Friend's Feature) ---
   List<String> _selectedFriendUids = [];
 
   @override
@@ -45,22 +45,15 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
     super.dispose();
   }
 
-  // --- SAVE LOGIC (NEW) ---
-
-  // REPLACE your existing _handleCreatePromise with this:
-
   Future<void> _handleCreatePromise() async {
     if (_nameController.text.trim().isEmpty) {
       _showErrorSnackbar("Please enter a promise name.");
       return;
     }
 
-    // Check if at least one slot has valid times
-    bool hasValidSlot = dynamicSlots.any(
-      (slot) => slot['start'] != null && slot['end'] != null,
-    );
+    bool hasValidSlot = dynamicSlots.any((slot) => slot['start'] != null);
     if (!hasValidSlot) {
-      _showErrorSnackbar("Please set a start and end time for your promise.");
+      _showErrorSnackbar("Please set a start time for your promise.");
       return;
     }
 
@@ -71,24 +64,29 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
     );
 
     try {
-      final promiseProvider = Provider.of<PromiseProvider>(
-        context,
-        listen: false,
-      );
+      final promiseProvider = Provider.of<PromiseProvider>(context, listen: false);
 
-      // LOOP: Create a separate promise for every slot defined
+      // 1. CREATE LOCAL PROMISES
       for (var slot in dynamicSlots) {
-        if (slot['start'] != null && slot['end'] != null) {
+        if (slot['start'] != null) {
+          final durMap = slot['duration'] as Map<String, int>;
+          final totalMinutes = (durMap['hours']! * 60) + durMap['minutes']!;
+
           await promiseProvider.addPromise(
             title: _nameController.text.trim(),
             description: _descriptionController.text.trim(),
             startTime: slot['start']!,
-            endTime: slot['end']!,
-            isRecursive: isRecurring, // Use the state variable from your widget
-            category: isRecurring ? 'Recurring' : 'One-time',
+            durationMinutes: totalMinutes,
+            isRecursive: isRecurring,
+            category: _selectedCategory,
             priority: difficultyStars,
           );
         }
+      }
+
+      // 2. SEND FRIEND REQUESTS (New Feature)
+      if (_selectedFriendUids.isNotEmpty) {
+        await _sendPromiseRequests();
       }
 
       if (mounted) {
@@ -108,52 +106,49 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
         _showErrorSnackbar("Error saving: $e");
       }
     }
-    // --- SEND FRIEND REQUESTS ---
-    if (_selectedFriendUids.isNotEmpty) {
-      try {
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        final db = Provider.of<DatabaseService>(context, listen: false);
-        final currentUser = authProvider.user;
+  }
 
-        if (currentUser != null) {
-          for (var friendUid in _selectedFriendUids) {
-            // Validate slots again or just allow sharing generic promise details
-            // We usually share the FIRST slot logic or base details.
-            // Let's share for the first valid start/end time found, or just raw details.
-            // Actually, requests are typically "I challenge you to do X at Y time".
-            // If multiple slots, we might send multiple requests or one general one.
-            // Let's send one request per slot, similar to how we create promises.
+  Future<void> _sendPromiseRequests() async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final db = Provider.of<DatabaseService>(context, listen: false);
+      final currentUser = authProvider.user;
 
-            for (var slot in dynamicSlots) {
-              if (slot['start'] != null && slot['end'] != null) {
-                final request = PromiseRequestModel(
-                  id: '', // Generated by Firestore
-                  senderUid: currentUser.uid,
-                  senderName: currentUser.displayName ?? 'Friend',
-                  title: _nameController.text.trim(),
-                  description: _descriptionController.text.trim(),
-                  startTime: slot['start']!,
-                  endTime: slot['end']!,
-                  category: isRecurring ? 'Recurring' : 'One-time',
-                  priority: difficultyStars,
-                  sentAt: DateTime.now(),
-                );
-                await db.sendPromiseRequest(friendUid, request);
-              }
+      if (currentUser != null) {
+        for (var friendUid in _selectedFriendUids) {
+          for (var slot in dynamicSlots) {
+            if (slot['start'] != null) {
+              // Calculate EndTime for the request model
+              final DateTime start = slot['start'];
+              final durMap = slot['duration'] as Map<String, int>;
+              final DateTime end = start.add(Duration(hours: durMap['hours']!, minutes: durMap['minutes']!));
+
+              final request = PromiseRequestModel(
+                id: '', // Generated by Firestore
+                senderUid: currentUser.uid,
+                senderName: currentUser.displayName ?? 'Friend',
+                title: _nameController.text.trim(),
+                description: _descriptionController.text.trim(),
+                startTime: start,
+                endTime: end, // Pass calculated EndTime
+                category: _selectedCategory,
+                priority: difficultyStars,
+                sentAt: DateTime.now(),
+              );
+              await db.sendPromiseRequest(friendUid, request);
             }
           }
         }
-      } catch (e) {
-        debugPrint("Error sending friend requests: $e");
-        // Don't block the main success flow, maybe show a toast
       }
+    } catch (e) {
+      debugPrint("Error sending friend requests: $e");
     }
   }
 
-  // --- SLOT MANAGEMENT METHODS ---
+  // --- UI METHODS ---
 
   void _addSlot() {
-    setState(() => dynamicSlots.add({'start': null, 'end': null}));
+    setState(() => dynamicSlots.add({'start': null, 'duration': {'hours': 1, 'minutes': 0}}));
   }
 
   void _removeSlot(int index) {
@@ -161,25 +156,18 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
   }
 
   void _toggleGlobalRecurring(bool? newValue) {
-    final bool newRecurringStatus = newValue ?? isRecurring;
-
     setState(() {
-      if (newRecurringStatus != isRecurring) {
-        isRecurring = newRecurringStatus;
-        for (var slot in dynamicSlots) {
-          slot['start'] = null;
-          slot['end'] = null;
-        }
+      isRecurring = newValue ?? isRecurring;
+      for (var slot in dynamicSlots) {
+        slot['start'] = null;
       }
     });
   }
 
-  // --- DATE/TIME PICKER LOGIC ---
-
-  Future<void> _pickFullDateTime(int index, String type) async {
+  Future<void> _pickStartDate(int index) async {
     DateTime now = DateTime.now();
-    DateTime? initialDateTime = dynamicSlots[index][type];
-    DateTime initialDate = initialDateTime ?? now;
+    DateTime? initialDate = dynamicSlots[index]['start'];
+    initialDate ??= now;
 
     final DateTime? pickedDate = await showDatePicker(
       context: context,
@@ -189,32 +177,26 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
     );
     if (pickedDate == null) return;
 
+    if (!mounted) return;
     final TimeOfDay? pickedTime = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(initialDate),
     );
     if (pickedTime == null) return;
 
-    final DateTime finalDateTime = DateTime(
-      pickedDate.year,
-      pickedDate.month,
-      pickedDate.day,
-      pickedTime.hour,
-      pickedTime.minute,
-    );
-    _validateAndSetDateTime(index, type, finalDateTime);
+    setState(() {
+      dynamicSlots[index]['start'] = DateTime(
+        pickedDate.year,
+        pickedDate.month,
+        pickedDate.day,
+        pickedTime.hour,
+        pickedTime.minute,
+      );
+    });
   }
 
-  Future<void> _pickDayTime(int index, String type) async {
-    final List<String> weekdays = [
-      'Mon',
-      'Tue',
-      'Wed',
-      'Thu',
-      'Fri',
-      'Sat',
-      'Sun',
-    ];
+  Future<void> _pickDayTime(int index) async {
+    final List<String> weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     String? selectedDay = weekdays[0];
 
     await showDialog(
@@ -224,25 +206,13 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
           title: const Text('Select Day of Week'),
           content: DropdownButtonFormField<String>(
             initialValue: selectedDay,
-            items: weekdays
-                .map(
-                  (day) =>
-                      DropdownMenuItem<String>(value: day, child: Text(day)),
-                )
-                .toList(),
-            onChanged: (newValue) {
-              selectedDay = newValue;
-            },
+            items: weekdays.map((day) => DropdownMenuItem(value: day, child: Text(day))).toList(),
+            onChanged: (newValue) => selectedDay = newValue,
           ),
           actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(selectedDay);
-              },
+              onPressed: () => Navigator.pop(context, selectedDay),
               child: const Text('OK'),
             ),
           ],
@@ -261,9 +231,9 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
       int currentWeekday = now.weekday;
       final int dayIndex = weekdays.indexOf(resultDay.toString());
       int targetWeekday = dayIndex + 1;
-      DateTime targetDate = now.add(
-        Duration(days: targetWeekday - currentWeekday),
-      );
+
+      DateTime targetDate = now.add(Duration(days: (targetWeekday - currentWeekday + 7) % 7));
+      if (targetDate.isBefore(now)) targetDate = targetDate.add(const Duration(days: 7));
 
       final DateTime finalDateTime = DateTime(
         targetDate.year,
@@ -272,44 +242,23 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
         pickedTime.hour,
         pickedTime.minute,
       );
-      _validateAndSetDateTime(index, type, finalDateTime);
+
+      setState(() {
+        dynamicSlots[index]['start'] = finalDateTime;
+      });
     });
   }
 
-  void _validateAndSetDateTime(int index, String type, DateTime finalDateTime) {
-    setState(() {
-      final currentPair = dynamicSlots[index];
-      if (type == 'start') {
-        final endTime = currentPair['end'];
-        if (endTime != null && finalDateTime.isAfter(endTime)) {
-          _showErrorSnackbar("Start Time cannot be after End Time.");
-          return;
-        }
-        currentPair['start'] = finalDateTime;
-      } else if (type == 'end') {
-        final startTime = currentPair['start'];
-        if (startTime != null && finalDateTime.isBefore(startTime)) {
-          _showErrorSnackbar("End Time cannot be before Start Time.");
-          return;
-        }
-        currentPair['end'] = finalDateTime;
-      }
-    });
-  }
-
-  void _pickDifficultyTime() async {
-    TextEditingController hoursController = TextEditingController(
-      text: difficultyTime['hours'].toString(),
-    );
-    TextEditingController minutesController = TextEditingController(
-      text: difficultyTime['minutes'].toString(),
-    );
+  void _pickDuration(int index) async {
+    final currentDuration = dynamicSlots[index]['duration'] as Map<String, int>;
+    TextEditingController hoursController = TextEditingController(text: currentDuration['hours'].toString());
+    TextEditingController minutesController = TextEditingController(text: currentDuration['minutes'].toString());
 
     await showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Enter Duration (hhh:mm)'),
+          title: const Text('Enter Duration'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -322,7 +271,7 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
                       controller: hoursController,
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.center,
-                      decoration: const InputDecoration(labelText: 'Hours'),
+                      decoration: const InputDecoration(labelText: 'Hrs'),
                     ),
                   ),
                   const Padding(
@@ -335,7 +284,7 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
                       controller: minutesController,
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.center,
-                      decoration: const InputDecoration(labelText: 'Minutes'),
+                      decoration: const InputDecoration(labelText: 'Mins'),
                     ),
                   ),
                 ],
@@ -343,30 +292,20 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
             ],
           ),
           actions: <Widget>[
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
+            TextButton(child: const Text('Cancel'), onPressed: () => Navigator.pop(context)),
             TextButton(
               child: const Text('Set'),
               onPressed: () {
                 int hours = int.tryParse(hoursController.text) ?? 0;
                 int minutes = int.tryParse(minutesController.text) ?? 0;
-                if (hours > 999 || hours < 0) {
-                  _showErrorSnackbar("Hours must be between 0 and 999.");
-                  return;
-                }
-                if (minutes > 59 || minutes < 0) {
-                  _showErrorSnackbar("Minutes must be between 0 and 59.");
+                if (hours < 0 || minutes < 0 || (hours == 0 && minutes == 0)) {
+                  _showErrorSnackbar("Invalid duration.");
                   return;
                 }
                 setState(() {
-                  difficultyTime = {'hours': hours, 'minutes': minutes};
-                  selectedDifficultyPeriod = 'Time';
+                  dynamicSlots[index]['duration'] = {'hours': hours, 'minutes': minutes};
                 });
-                Navigator.of(context).pop();
+                Navigator.pop(context);
               },
             ),
           ],
@@ -377,11 +316,7 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
 
   void _showErrorSnackbar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppStyles.errorRed,
-        duration: const Duration(seconds: 2),
-      ),
+      SnackBar(content: Text(message), backgroundColor: AppStyles.errorRed),
     );
   }
 
@@ -401,18 +336,11 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: children,
-      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
     );
   }
 
-  Widget _buildTimeSlotChip(
-    String label,
-    bool isSelected, {
-    VoidCallback? onTap,
-  }) {
+  Widget _buildTimeSlotChip(String label, bool isSelected, {VoidCallback? onTap}) {
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -420,47 +348,11 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
         decoration: BoxDecoration(
           color: isSelected ? AppStyles.primaryPurple : Colors.grey[200],
           borderRadius: BorderRadius.circular(8.0),
-          border: isSelected
-              ? Border.all(color: AppStyles.primaryPurple)
-              : null,
+          border: isSelected ? Border.all(color: AppStyles.primaryPurple) : null,
         ),
         child: Text(
           label,
-          style: TextStyle(
-            color: isSelected ? AppStyles.white : Colors.black87,
-            fontSize: 14,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPeriodChip(String label, Function(String) onTap) {
-    final isSelected = selectedDifficultyPeriod == label;
-
-    return InkWell(
-      onTap: () => onTap(label),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppStyles.primaryPurple : Colors.grey[200],
-          borderRadius: BorderRadius.circular(8.0),
-        ),
-        child: Row(
-          children: [
-            if (isSelected)
-              const Padding(
-                padding: EdgeInsets.only(right: 4.0),
-                child: Icon(Icons.check, size: 16, color: AppStyles.white),
-              ),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? AppStyles.white : Colors.black87,
-                fontSize: 14,
-              ),
-            ),
-          ],
+          style: TextStyle(color: isSelected ? AppStyles.white : Colors.black87, fontSize: 14),
         ),
       ),
     );
@@ -471,28 +363,21 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppStyles.primaryPurple,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: AppStyles.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'New Promise',
-          style: TextStyle(color: AppStyles.white, fontWeight: FontWeight.bold),
-        ),
+        title: const Text('New Promise', style: TextStyle(color: AppStyles.white)),
+        leading: IconButton(icon: const Icon(Icons.close, color: Colors.white), onPressed: () => Navigator.pop(context)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.only(bottom: 20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(height: 20, color: AppStyles.primaryPurple),
             _buildNameSection(),
             _buildDescriptionSection(),
+            _buildCategorySection(),
             _buildSlotsSection(),
             _buildDifficultySection(),
             const SizedBox(height: 20),
-            _buildFriendsSection(context),
+            _buildFriendsSection(context), // --- NEW SECTION ---
             const SizedBox(height: 30),
           ],
         ),
@@ -503,37 +388,9 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
   Widget _buildNameSection() {
     return _buildCardSection(
       children: [
-        Row(
-          children: [
-            const Text(
-              'Name',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(width: 8),
-            Icon(
-              Icons.drive_file_rename_outline,
-              size: 18,
-              color: Colors.grey[600],
-            ),
-          ],
-        ),
+        const Text('Name', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 8),
-        TextField(
-          controller: _nameController,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Colors.grey[200],
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              vertical: 12.0,
-              horizontal: 10.0,
-            ),
-            hintText: 'Enter promise name',
-          ),
-        ),
+        TextField(controller: _nameController, decoration: const InputDecoration(hintText: 'Enter promise name')),
       ],
     );
   }
@@ -541,33 +398,38 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
   Widget _buildDescriptionSection() {
     return _buildCardSection(
       children: [
-        Row(
-          children: [
-            const Text(
-              'Description',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(width: 8),
-            Icon(Icons.notes, size: 18, color: Colors.grey[600]),
-          ],
-        ),
+        const Text('Description', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 8),
-        TextField(
-          controller: _descriptionController,
-          maxLines: 4,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Colors.grey[200],
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              vertical: 12.0,
-              horizontal: 10.0,
-            ),
-            hintText: 'Enter promise description',
-          ),
+        TextField(controller: _descriptionController, maxLines: 4, decoration: const InputDecoration(hintText: 'Enter promise description')),
+      ],
+    );
+  }
+
+  Widget _buildCategorySection() {
+    return _buildCardSection(
+      children: [
+        const Text('Category', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: _categories.map((category) {
+            final isSelected = _selectedCategory == category;
+            return ChoiceChip(
+              label: Text(category),
+              selected: isSelected,
+              onSelected: (selected) {
+                if (selected) {
+                  setState(() => _selectedCategory = category);
+                }
+              },
+              selectedColor: AppStyles.primaryPurple,
+              labelStyle: TextStyle(
+                color: isSelected ? Colors.white : Colors.black,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            );
+          }).toList(),
         ),
       ],
     );
@@ -575,41 +437,24 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
 
   Widget _buildSlotsSection() {
     final List<Widget> children = [
-      Row(
-        children: const [
-          Text(
-            'Slots',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-          SizedBox(width: 8),
-          Icon(Icons.access_time, size: 18, color: Colors.grey),
-        ],
-      ),
+      Row(children: const [
+        Text('Slots', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        SizedBox(width: 8),
+        Icon(Icons.access_time, size: 18, color: Colors.grey),
+      ]),
       const SizedBox(height: 12),
     ];
 
-    final String dateFormat = isRecurring ? dayTimeFormat : fullDateTimeFormat;
-    final Function pickFunction = isRecurring
-        ? _pickDayTime
-        : _pickFullDateTime;
+    dynamicSlots.asMap().forEach((index, slot) {
+      final DateTime? startTime = slot['start'];
+      final duration = slot['duration'] as Map<String, int>;
 
-    dynamicSlots.asMap().forEach((index, slotPair) {
-      final DateTime? startTime = slotPair['start'];
-      final DateTime? endTime = slotPair['end'];
-
+      final dateFormat = isRecurring ? dayTimeFormat : fullDateTimeFormat;
       final startLabel = startTime != null
           ? intl.DateFormat(dateFormat).format(startTime)
-          : isRecurring
-          ? 'Day hh:mm'
-          : 'dd/MMM/yy HH:mm';
-      final endLabel = endTime != null
-          ? intl.DateFormat(dateFormat).format(endTime)
-          : isRecurring
-          ? 'Day hh:mm'
-          : 'dd/MMM/yy HH:mm';
+          : "Select Start Time";
 
-      final isStartSelected = startTime != null;
-      final isEndSelected = endTime != null;
+      final durationLabel = "${duration['hours']}h ${duration['minutes']}m";
 
       children.add(
         Padding(
@@ -624,39 +469,45 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildTimeSlotChip(
-                      startLabel,
-                      isStartSelected,
-                      onTap: () => pickFunction(index, 'start'),
-                    ),
-                    const SizedBox(height: 10),
-                    _buildTimeSlotChip(
-                      endLabel,
-                      isEndSelected,
-                      onTap: () => pickFunction(index, 'end'),
-                    ),
+                    Text("Slot ${index+1}", style: const TextStyle(fontWeight: FontWeight.w600)),
+                    if (dynamicSlots.length > 1)
+                      InkWell(
+                        onTap: () => _removeSlot(index),
+                        child: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                      )
                   ],
                 ),
-                const SizedBox(height: 15),
+                const SizedBox(height: 10),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    GestureDetector(
-                      onTap: () => _removeSlot(index),
-                      child: Row(
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.delete_outline,
-                            color: Colors.red[400],
-                            size: 18,
+                          const Text("Start", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                          const SizedBox(height: 4),
+                          _buildTimeSlotChip(
+                            startLabel,
+                            startTime != null,
+                            onTap: () => isRecurring ? _pickDayTime(index) : _pickStartDate(index),
                           ),
-                          const SizedBox(width: 4),
-                          const Text(
-                            'Remove Slot',
-                            style: TextStyle(fontSize: 14, color: Colors.red),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text("Duration", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                          const SizedBox(height: 4),
+                          _buildTimeSlotChip(
+                            durationLabel,
+                            true,
+                            onTap: () => _pickDuration(index),
                           ),
                         ],
                       ),
@@ -671,46 +522,22 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
     });
 
     children.addAll([
-      const SizedBox(height: 5),
-      Row(
-        children: [
-          const Text('Add slot', style: TextStyle(fontSize: 14)),
-          const SizedBox(width: 5),
-          GestureDetector(
-            onTap: _addSlot,
-            child: const Icon(Icons.add_circle_outline, color: Colors.black),
-          ),
-        ],
+      GestureDetector(
+        onTap: _addSlot,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Icon(Icons.add_circle_outline, color: AppStyles.primaryPurple),
+            SizedBox(width: 5),
+            Text('Add another slot', style: TextStyle(color: AppStyles.primaryPurple, fontWeight: FontWeight.bold)),
+          ],
+        ),
       ),
       const SizedBox(height: 15),
       Row(
-        mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Text('Recurring Task', style: TextStyle(fontSize: 14)),
-              Checkbox(
-                value: isRecurring,
-                onChanged: _toggleGlobalRecurring,
-                activeColor: Colors.black,
-              ),
-            ],
-          ),
-        ],
-      ),
-      const SizedBox(height: 10),
-      Row(
-        children: [
-          const Text('Add Slot(s) Later', style: TextStyle(fontSize: 14)),
-          Checkbox(
-            value: addSlotsLater,
-            onChanged: (bool? newValue) {
-              setState(() {
-                addSlotsLater = newValue ?? false;
-              });
-            },
-            activeColor: Colors.black,
-          ),
+          const Text('Recurring Task (Weekly)', style: TextStyle(fontSize: 14)),
+          Checkbox(value: isRecurring, onChanged: _toggleGlobalRecurring, activeColor: AppStyles.primaryPurple),
         ],
       ),
     ]);
@@ -719,85 +546,38 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
   }
 
   Widget _buildDifficultySection() {
-    final hours = difficultyTime['hours']!.toString().padLeft(3, '0');
-    final minutes = difficultyTime['minutes']!.toString().padLeft(2, '0');
-    final difficultyTimeLabel = '$hours:$minutes';
-    final bool isTimeSelected = selectedDifficultyPeriod == 'Time';
-
     return _buildCardSection(
       children: [
-        const Text(
-          'Difficulty',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
+        const Text('Priority', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 8),
         Row(
           children: List.generate(5, (index) {
             return IconButton(
-              onPressed: () {
-                setState(() {
-                  difficultyStars = index + 1;
-                });
-              },
+              onPressed: () => setState(() => difficultyStars = index + 1),
               icon: Icon(
                 index < difficultyStars ? Icons.star : Icons.star_border,
                 color: Colors.yellow[700],
               ),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
             );
           }),
-        ),
-        const SizedBox(height: 15),
-        Wrap(
-          spacing: 10,
-          children: [
-            _buildPeriodChip(
-              'Total',
-              (label) => setState(() => selectedDifficultyPeriod = label),
-            ),
-            _buildPeriodChip(
-              'Per week',
-              (label) => setState(() => selectedDifficultyPeriod = label),
-            ),
-            InkWell(
-              onTap: () {
-                setState(() {
-                  selectedDifficultyPeriod = 'Time';
-                });
-                _pickDifficultyTime();
-              },
-              child: _buildTimeSlotChip(difficultyTimeLabel, isTimeSelected),
-            ),
-          ],
         ),
         const SizedBox(height: 20),
         Align(
           alignment: Alignment.centerRight,
           child: ElevatedButton(
-            // --- CONNECTED THE NEW SAVE FUNCTION HERE ---
             onPressed: _handleCreatePromise,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppStyles.primaryPurple,
-              padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             ),
-            child: const Text(
-              'Create',
-              style: TextStyle(
-                color: AppStyles.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
+            child: const Text('Create Promise', style: TextStyle(color: Colors.white)),
           ),
         ),
       ],
     );
   }
 
+  // --- NEW: FRIENDS SECTION WIDGET ---
   Widget _buildFriendsSection(BuildContext context) {
     return _buildCardSection(
       children: [
@@ -813,10 +593,7 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
         ),
         const SizedBox(height: 8),
         StreamBuilder<List<UserModel>>(
-          stream: Provider.of<FriendsProvider>(
-            context,
-            listen: false,
-          ).friendsStream,
+          stream: Provider.of<FriendsProvider>(context, listen: false).friendsStream,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
