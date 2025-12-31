@@ -291,11 +291,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             TextButton(
-              onPressed: () {
-                // Call the Logout method in Provider
-                Provider.of<AuthProvider>(context, listen: false).logout();
-                Navigator.of(context).pop();
-                // AuthWrapper in main.dart will handle the redirect to Login
+              onPressed: () async {
+                await Provider.of<AuthProvider>(
+                  context,
+                  listen: false,
+                ).logout();
+
+                Navigator.of(context).popUntil((route) => route.isFirst);
               },
               child: Text(
                 'Log Out',
