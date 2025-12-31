@@ -22,7 +22,9 @@ class FirestoreService implements DatabaseService {
     required String category,
     required int priority,
   }) async {
-    if (_userId == null) return;
+    if (_userId == null) {
+      throw Exception("User must be logged in to create a promise");
+    }
     await _db.collection('promises').add({
       'title': title,
       'description': description,
@@ -54,7 +56,9 @@ class FirestoreService implements DatabaseService {
 
   @override
   Future<void> updatePromise(PromiseModel promise) async {
-    if (_userId == null) return;
+    if (_userId == null) {
+      throw Exception("User must be logged in to update a promise");
+    }
     await _db.collection('promises').doc(promise.id).update(promise.toMap());
   }
 
@@ -232,7 +236,9 @@ class FirestoreService implements DatabaseService {
 
   @override
   Future<void> updateUserStats(UserStatsModel stats) async {
-    if (_userId == null) return;
+    if (_userId == null) {
+      throw Exception("User must be logged in to update stats");
+    }
     await _db
         .collection('users')
         .doc(_userId)
@@ -243,7 +249,9 @@ class FirestoreService implements DatabaseService {
 
   @override
   Future<void> updateCoins(int amount) async {
-    if (_userId == null) return;
+    if (_userId == null) {
+      throw Exception("User must be logged in to update coins");
+    }
 
     final ref = _db
         .collection('users')
