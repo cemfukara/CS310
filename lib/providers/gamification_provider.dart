@@ -3,7 +3,7 @@ import '../models/user_stats_model.dart';
 import '../services/database_service.dart';
 
 class GamificationProvider extends ChangeNotifier {
-  final DatabaseService _db;
+  DatabaseService _db;
   UserStatsModel _stats = UserStatsModel();
   bool _isLoading = true;
 
@@ -11,6 +11,13 @@ class GamificationProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
 
   GamificationProvider(this._db) {
+    _init();
+  }
+
+  void updateDatabase(DatabaseService db) {
+    _db = db;
+    _isLoading = true;
+    notifyListeners();
     _init();
   }
 
