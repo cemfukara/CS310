@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 
 class AuthProvider with ChangeNotifier {
@@ -47,6 +48,11 @@ class AuthProvider with ChangeNotifier {
     _setMessage(null);
     try {
       await _authService.signUp(email: email, password: password);
+
+      // reset last tab to 0, so it starts from the home screen
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('last_tab', 0);
+
       _setLoading(false);
       return true;
     } catch (e) {
@@ -62,6 +68,11 @@ class AuthProvider with ChangeNotifier {
     _setMessage(null);
     try {
       await _authService.signIn(email: email, password: password);
+
+      // reset last tab to 0, so it starts from the home screen
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('last_tab', 0);
+
       _setLoading(false);
       return true;
     } catch (e) {
