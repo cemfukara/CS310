@@ -40,9 +40,7 @@ class _FriendsScreenState extends State<FriendsScreen>
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Enter the exact email of your friend to send a request.',
-                ),
+                const Text('Enter the exact email of your friend.'),
                 const SizedBox(height: 10),
                 TextField(
                   controller: emailController,
@@ -77,13 +75,14 @@ class _FriendsScreenState extends State<FriendsScreen>
                           context,
                           listen: false,
                         );
+
                         final error = await provider.sendRequest(
                           emailController.text,
                         );
 
                         if (mounted) {
                           setState(() => isSearching = false);
-                          Navigator.pop(context); // Close dialog
+                          Navigator.pop(context);
 
                           if (error == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -113,152 +112,189 @@ class _FriendsScreenState extends State<FriendsScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<FriendsProvider>(
-      builder: (context, provider, child) {
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Friends'),
-            centerTitle: true,
-            bottom: TabBar(
-              controller: _tabController,
-              indicatorColor: AppStyles.white,
-              labelColor: AppStyles.white,
-              unselectedLabelColor: Colors.white70,
-              tabs: [
-                Tab(text: 'My Friends (${provider.friends.length})'),
-                Tab(text: 'Requests (${provider.requests.length})'),
-              ],
-            ),
-          ),
-          body: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildFriendsList(provider.friends),
-              _buildRequestsList(provider),
-            ],
-          ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: _showAddFriendDialog,
-            backgroundColor: AppStyles.primaryPurple,
-            icon: const Icon(Icons.person_add, color: Colors.white),
-            label: const Text(
-              'Add Friend',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        );
-      },
-    );
-  }
+    final provider = context.watch<FriendsProvider>();
 
-  Widget _buildFriendsList(List<UserModel> friends) {
-    if (friends.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.people_outline, size: 60, color: Colors.grey[400]),
-            const SizedBox(height: 10),
-            Text("No friends yet.", style: TextStyle(color: Colors.grey[600])),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Friends'),
+        centerTitle: true,
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: AppStyles.white,
+          labelColor: AppStyles.white,
+          unselectedLabelColor: Colors.white70,
+          tabs: [
+            // FRIEND COUNT TAB
+            StreamBuilder<List<UserModel>>(
+              stream: provider.friendsStream,
+              builder: (_, snapshot) {
+                final count = snapshot.data?.length ?? 0;
+                return Tab(text: 'My Friends ($count)');
+              },
+            ),
+
+            // REQUEST COUNT TAB
+            StreamBuilder<List<UserModel>>(
+              stream: provider.requestsStream,
+              builder: (_, snapshot) {
+                final count = snapshot.data?.length ?? 0;
+                return Tab(text: 'Requests ($count)');
+              },
+            ),
           ],
         ),
-      );
-    }
+      ),
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: friends.length,
-      itemBuilder: (context, index) {
-        final friend = friends[index];
-        final initials = friend.displayName.isNotEmpty
-            ? friend.displayName[0].toUpperCase()
-            : '?';
+      // TAB CONTENT
+      body: TabBarView(
+        controller: _tabController,
+        children: [_friendsTab(provider), _requestsTab(provider)],
+      ),
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: AppStyles.accentPink,
-              child: Text(
-                initials,
-                style: const TextStyle(color: Colors.white),
-              ),
-            ),
-            title: Text(friend.displayName, style: AppStyles.bodyLarge),
-            subtitle: Text(friend.email, style: AppStyles.bodySmall),
-          ),
-        );
-      },
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showAddFriendDialog,
+        backgroundColor: AppStyles.primaryPurple,
+        icon: const Icon(Icons.person_add, color: Colors.white),
+        label: const Text('Add Friend', style: TextStyle(color: Colors.white)),
+      ),
     );
   }
 
-  Widget _buildRequestsList(FriendsProvider provider) {
-    final requests = provider.requests;
+  // ---------------- FRIENDS TAB ----------------
+  Widget _friendsTab(FriendsProvider provider) {
+    return StreamBuilder<List<UserModel>>(
+      stream: provider.friendsStream,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-    if (requests.isEmpty) {
-      return const Center(child: Text("No pending requests."));
-    }
+        final friends = snapshot.data!;
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: requests.length,
-      itemBuilder: (context, index) {
-        final req = requests[index];
-        final initials = req.displayName.isNotEmpty
-            ? req.displayName[0].toUpperCase()
-            : '?';
-
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Row(
+        if (friends.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                CircleAvatar(
-                  backgroundColor: AppStyles.primaryPurple,
+                Icon(Icons.people_outline, size: 60, color: Colors.grey[400]),
+                const SizedBox(height: 10),
+                Text(
+                  "No friends yet.",
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: friends.length,
+          itemBuilder: (context, index) {
+            final friend = friends[index];
+            final initials = friend.displayName.isNotEmpty
+                ? friend.displayName[0].toUpperCase()
+                : '?';
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: AppStyles.accentPink,
                   child: Text(
                     initials,
                     style: const TextStyle(color: Colors.white),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        req.displayName,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                title: Text(friend.displayName, style: AppStyles.bodyLarge),
+                subtitle: Text(friend.email, style: AppStyles.bodySmall),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ---------------- REQUESTS TAB ----------------
+  Widget _requestsTab(FriendsProvider provider) {
+    return StreamBuilder<List<UserModel>>(
+      stream: provider.requestsStream,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final requests = snapshot.data!;
+
+        if (requests.isEmpty) {
+          return const Center(child: Text("No pending requests."));
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: requests.length,
+          itemBuilder: (context, index) {
+            final req = requests[index];
+            final initials = req.displayName.isNotEmpty
+                ? req.displayName[0].toUpperCase()
+                : '?';
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: AppStyles.primaryPurple,
+                      child: Text(
+                        initials,
+                        style: const TextStyle(color: Colors.white),
                       ),
-                      Text(
-                        req.email,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
+                    ),
+                    const SizedBox(width: 12),
+
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            req.displayName,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            req.email,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+
+                    IconButton(
+                      icon: const Icon(
+                        Icons.check_circle,
+                        color: AppStyles.successGreen,
+                        size: 30,
+                      ),
+                      onPressed: () => provider.acceptRequest(req),
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.cancel,
+                        color: AppStyles.errorRed,
+                        size: 30,
+                      ),
+                      onPressed: () => provider.declineRequest(req.uid),
+                    ),
+                  ],
                 ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.check_circle,
-                    color: AppStyles.successGreen,
-                    size: 30,
-                  ),
-                  onPressed: () => provider.acceptRequest(req),
-                ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.cancel,
-                    color: AppStyles.errorRed,
-                    size: 30,
-                  ),
-                  onPressed: () => provider.declineRequest(req.uid),
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
