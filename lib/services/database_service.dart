@@ -1,6 +1,7 @@
 import '../models/promise_model.dart';
 import '../models/user_model.dart';
-import '../models/user_stats_model.dart'; // Import the new stats model
+import '../models/user_stats_model.dart';
+import '../models/promise_request_model.dart'; // Import the new stats model
 
 abstract class DatabaseService {
   // --- PROMISE METHODS (EXISTING) ---
@@ -53,4 +54,13 @@ abstract class DatabaseService {
   Future<void> updateCoins(int amount); // Positive to add, negative to subtract
   Future<void> unlockItem(String itemId);
   Future<void> unlockAchievement(String achievementId);
+
+  // --- PROMISE REQUESTS ---
+  Future<void> sendPromiseRequest(
+    String targetUid,
+    PromiseRequestModel request,
+  );
+  Stream<List<PromiseRequestModel>> getPromiseRequestsStream();
+  Future<void> acceptPromiseRequest(PromiseRequestModel request);
+  Future<void> declinePromiseRequest(String requestId);
 }

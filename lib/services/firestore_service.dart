@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/promise_model.dart';
 import '../models/user_model.dart';
 import '../models/user_stats_model.dart';
+import '../models/promise_request_model.dart';
 import 'database_service.dart';
 
 class FirestoreService implements DatabaseService {
@@ -293,5 +294,73 @@ class FirestoreService implements DatabaseService {
     await ref.set({
       'achievements': FieldValue.arrayUnion([achievementId]),
     }, SetOptions(merge: true));
+  }
+
+  // --- PROMISE REQUESTS IMPLEMENTATION ---
+
+  @override
+  Future<void> sendPromiseRequest(
+    String targetUid,
+    PromiseRequestModel request,
+  ) async {
+    if (_userId == null) return;
+
+    // Add to target's "promise_requests" subcollection
+    await _db
+        .collection('users')
+        .doc(targetUid)
+        .collection('promise_requests')
+        .add(
+          request.toMap(),
+        ); // Firestore generates ID, or we can use request.id if set
+  }
+
+  @override
+  Stream<List<PromiseRequestModel>> getPromiseRequestsStream() {
+    if (_userId == null) return const Stream.empty();
+
+    return _db
+        .collection('users')
+        .doc(_userId)
+        .collection('promise_requests')
+        .orderBy('sentAt', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => PromiseRequestModel.fromFirestore(doc))
+              .toList(),
+        );
+  }
+
+  @override
+  Future<void> acceptPromiseRequest(PromiseRequestModel request) async {
+    if (_userId == null) return;
+
+    // 1. Create the promise for the current user
+    // We reuse the existing createPromise logic
+    await createPromise(
+      title: request.title,
+      description: request.description,
+      startTime: request.startTime,
+      endTime: request.endTime,
+      isRecursive: false, // Requests usually one-time, unless model supports it
+      category: request.category,
+      priority: request.priority,
+    );
+
+    // 2. Delete the request
+    await declinePromiseRequest(request.id);
+  }
+
+  @override
+  Future<void> declinePromiseRequest(String requestId) async {
+    if (_userId == null) return;
+
+    await _db
+        .collection('users')
+        .doc(_userId)
+        .collection('promise_requests')
+        .doc(requestId)
+        .delete();
   }
 }

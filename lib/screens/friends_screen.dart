@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../utils/app_styles.dart';
 import '../providers/friends_provider.dart';
 import '../models/user_model.dart';
+import '../models/promise_request_model.dart';
+import '../services/database_service.dart';
 
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
@@ -110,6 +112,93 @@ class _FriendsScreenState extends State<FriendsScreen>
     );
   }
 
+  void _showRequestsDialog(UserModel friend) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final db = Provider.of<DatabaseService>(context, listen: false);
+        return AlertDialog(
+          title: Text('Requests from ${friend.displayName}'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: StreamBuilder<List<PromiseRequestModel>>(
+              stream: db.getPromiseRequestsStream(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                // Filter requests from this friend
+                final allRequests = snapshot.data ?? [];
+                final requests = allRequests
+                    .where((r) => r.senderUid == friend.uid)
+                    .toList();
+
+                if (requests.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.all(20.0),
+                    child: Text("No pending promise requests."),
+                  );
+                }
+
+                return ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: requests.length,
+                  itemBuilder: (context, index) {
+                    final req = requests[index];
+                    return Card(
+                      color: AppStyles.nearWhite,
+                      child: ListTile(
+                        title: Text(req.title, style: AppStyles.labelLarge),
+                        subtitle: Text(req.description),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.check,
+                                color: AppStyles.successGreen,
+                              ),
+                              onPressed: () async {
+                                await db.acceptPromiseRequest(req);
+                                if (mounted) Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Promise accepted!"),
+                                    backgroundColor: AppStyles.successGreen,
+                                  ),
+                                );
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.close,
+                                color: AppStyles.errorRed,
+                              ),
+                              onPressed: () async {
+                                await db.declinePromiseRequest(req.id);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<FriendsProvider>();
@@ -208,6 +297,14 @@ class _FriendsScreenState extends State<FriendsScreen>
                 ),
                 title: Text(friend.displayName, style: AppStyles.bodyLarge),
                 subtitle: Text(friend.email, style: AppStyles.bodySmall),
+                trailing: IconButton(
+                  icon: const Icon(
+                    Icons.assignment_ind_outlined,
+                    color: AppStyles.primaryPurple,
+                  ),
+                  tooltip: 'Promise Requests',
+                  onPressed: () => _showRequestsDialog(friend),
+                ),
               ),
             );
           },
