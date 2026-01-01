@@ -16,7 +16,7 @@ class EditPromiseScreen extends StatefulWidget {
 class _EditPromiseScreenState extends State<EditPromiseScreen> {
   late PromiseModel _originalPromise;
   bool _isInit = false;
-  bool _canEdit = true; // --- NEW: Permission flag
+  bool _canEdit = true; // Permission flag
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
@@ -38,6 +38,7 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
         _originalPromise = args;
 
         // --- CHECK PERMISSIONS ---
+        // Only the creator (uid) matches the createdBy field can edit.
         final currentUser = Provider.of<AuthProvider>(context, listen: false).user;
         if (currentUser != null) {
           _canEdit = _originalPromise.createdBy == currentUser.uid;
@@ -74,6 +75,8 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
   }
 
   Future<void> _handleSaveChanges() async {
+    // Security check
+    if (!_canEdit) return;
     if (_nameController.text.trim().isEmpty) return;
 
     showDialog(
@@ -85,6 +88,7 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
     try {
       final provider = Provider.of<PromiseProvider>(context, listen: false);
 
+      // 1. UPDATE EXISTING PROMISE
       if (dynamicSlots.isNotEmpty) {
         final mainSlot = dynamicSlots[0];
         final durMap = mainSlot['duration'] as Map<String, int>;
@@ -104,6 +108,7 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
         await provider.updatePromise(updatedPromise);
       }
 
+      // 2. CREATE NEW PROMISES (If added via "Add Slot")
       if (dynamicSlots.length > 1) {
         for (int i = 1; i < dynamicSlots.length; i++) {
           final slot = dynamicSlots[i];
@@ -125,8 +130,8 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
       }
 
       if (mounted) {
-        Navigator.pop(context);
-        Navigator.pop(context);
+        Navigator.pop(context); // Close Loader
+        Navigator.pop(context); // Close Screen
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Changes saved!')));
       }
     } catch (e) {
@@ -154,7 +159,6 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
   }
 
   Future<void> _pickStartDate(int index) async {
-    // Disable if not allowed
     if (!_canEdit) return;
 
     DateTime now = DateTime.now();
@@ -188,7 +192,6 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
   }
 
   void _pickDuration(int index) async {
-    // Disable if not allowed
     if (!_canEdit) return;
 
     final currentDuration = dynamicSlots[index]['duration'] as Map<String, int>;
@@ -227,16 +230,26 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            // --- READ ONLY BANNER ---
             if (!_canEdit)
               Container(
-                padding: const EdgeInsets.all(8),
-                margin: const EdgeInsets.only(bottom: 16),
-                color: Colors.amber.shade100,
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade100,
+                  borderRadius: BorderRadius.circular(10), // Rounded corners
+                  border: Border.all(color: Colors.amber.shade300),
+                ),
                 child: Row(
                   children: const [
-                    Icon(Icons.lock, color: Colors.orange),
-                    SizedBox(width: 8),
-                    Expanded(child: Text("You can only view this shared promise."))
+                    Icon(Icons.lock_outline, color: Colors.orange),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        "You can view this shared promise, but only the creator can edit details.",
+                        style: TextStyle(color: Colors.black87),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -244,18 +257,18 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
             TextField(
               controller: _nameController,
               decoration: const InputDecoration(labelText: 'Name'),
-              enabled: _canEdit, // DISABLE
+              enabled: _canEdit,
             ),
             const SizedBox(height: 10),
             TextField(
               controller: _descriptionController,
               decoration: const InputDecoration(labelText: 'Description'),
               maxLines: 3,
-              enabled: _canEdit, // DISABLE
+              enabled: _canEdit,
             ),
             const SizedBox(height: 10),
 
-            // --- CATEGORY SELECTOR IN EDIT MODE ---
+            // --- CATEGORY SELECTOR ---
             Align(alignment: Alignment.centerLeft, child: Text("Category", style: TextStyle(fontWeight: FontWeight.bold))),
             const SizedBox(height: 5),
             Align(
@@ -266,9 +279,12 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
                   return ChoiceChip(
                     label: Text(c),
                     selected: _selectedCategory == c,
-                    onSelected: _canEdit ? (val) { // DISABLE SELECTION
+                    // Disable selection if not owner
+                    onSelected: _canEdit
+                        ? (val) {
                       if (val) setState(() => _selectedCategory = c);
-                    } : null,
+                    }
+                        : null,
                     selectedColor: AppStyles.primaryPurple,
                     labelStyle: TextStyle(color: _selectedCategory == c ? Colors.white : Colors.black),
                   );
@@ -277,6 +293,7 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
             ),
             const SizedBox(height: 20),
 
+            // --- SLOTS ---
             ...List.generate(dynamicSlots.length, (index) {
               final slot = dynamicSlots[index];
               final start = slot['start'] as DateTime?;
@@ -289,7 +306,7 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Only show editing icons if owner
+                      // Only show edit icons if allowed
                       if (_canEdit) ...[
                         IconButton(icon: const Icon(Icons.edit_calendar), onPressed: () => _pickStartDate(index)),
                         IconButton(icon: const Icon(Icons.timer), onPressed: () => _pickDuration(index)),
@@ -301,6 +318,7 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
               );
             }),
 
+            // --- ACTION BUTTONS (Hidden if read-only) ---
             if (_canEdit && dynamicSlots.isNotEmpty)
               TextButton.icon(icon: const Icon(Icons.add), label: const Text('Add Slot'), onPressed: _addSlot),
 

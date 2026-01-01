@@ -51,12 +51,11 @@ class FirestoreService implements DatabaseService {
 
   @override
   Stream<List<PromiseModel>> getPromisesStream() {
-    // FIX: Return a stream of empty list if user is null to clear UI
     if (_userId == null) return Stream.value([]);
 
     return _db
         .collection('promises')
-    // FIX: Query by 'participants' array to include shared promises
+    // Query by 'participants' to include shared promises
         .where('participants', arrayContains: _userId)
         .orderBy('startTime', descending: false)
         .snapshots()
@@ -190,6 +189,7 @@ class FirestoreService implements DatabaseService {
   }
 
   // --- PROMISE REQUESTS IMPLEMENTATION ---
+
   @override
   Future<void> sendPromiseRequest(String targetUid, PromiseRequestModel request) async {
     if (_userId == null) return;
@@ -208,13 +208,27 @@ class FirestoreService implements DatabaseService {
   Future<void> acceptPromiseRequest(PromiseRequestModel request) async {
     if (_userId == null) return;
 
+    bool sharedSuccessfully = false;
+
+    // 1. Try to sync with existing promise (Single Document Source)
     if (request.linkedPromiseId != null) {
-      // 1. REAL-TIME SHARING: Add user to existing document's participants
-      await _db.collection('promises').doc(request.linkedPromiseId).update({
-        'participants': FieldValue.arrayUnion([_userId]),
-      });
-    } else {
-      // Fallback for requests without IDs (legacy)
+      final docRef = _db.collection('promises').doc(request.linkedPromiseId);
+
+      // FIX: Removed the docRef.get() check here!
+      // We try to update blindly. Security rules allow updating if you add yourself to participants.
+      try {
+        await docRef.update({
+          'participants': FieldValue.arrayUnion([_userId]),
+        });
+        sharedSuccessfully = true;
+      } catch (e) {
+        print("Could not link to shared promise (might be deleted or permission issue): $e");
+        // sharedSuccessfully remains false, triggering fallback
+      }
+    }
+
+    // 2. Fallback: If shared doc update failed (e.g. doc deleted), create a personal copy
+    if (!sharedSuccessfully) {
       final int duration = request.endTime.difference(request.startTime).inMinutes;
       await createPromise(
         title: request.title,
@@ -224,11 +238,11 @@ class FirestoreService implements DatabaseService {
         isRecursive: false,
         category: request.category,
         priority: request.priority,
-        sharedBy: request.senderName,
+        sharedBy: request.senderName, // Mark as shared
       );
     }
 
-    // 2. Remove the request
+    // 3. Remove the request
     await declinePromiseRequest(request.id);
   }
 

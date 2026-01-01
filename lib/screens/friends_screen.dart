@@ -5,7 +5,7 @@ import '../providers/friends_provider.dart';
 import '../models/user_model.dart';
 import '../models/promise_request_model.dart';
 import '../services/database_service.dart';
-import '../providers/promise_provider.dart'; // Import PromiseProvider
+import '../providers/promise_provider.dart';
 
 class FriendsScreen extends StatefulWidget {
   const FriendsScreen({super.key});
@@ -113,6 +113,59 @@ class _FriendsScreenState extends State<FriendsScreen>
     );
   }
 
+  // --- FIXED SAFE ACCEPT LOGIC ---
+  Future<void> _handleAcceptPromise(
+      BuildContext context,
+      DatabaseService db,
+      PromiseRequestModel req,
+      ) async {
+    // 1. CAPTURE OBJECTS BEFORE ASYNC GAP
+    // This ensures we can use them even if the button widget is disposed
+    final rootNavigator = Navigator.of(context, rootNavigator: true);
+    final dialogNavigator = Navigator.of(context);
+    final promiseProvider = Provider.of<PromiseProvider>(context, listen: false);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    // 2. Show Loading Dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      // 3. Execute DB Operation
+      await db.acceptPromiseRequest(req);
+
+      // 4. Wait for propagation
+      await Future.delayed(const Duration(seconds: 2));
+
+      // 5. Force Reload
+      await promiseProvider.reload();
+
+      // 6. Dismiss Dialogs & Show Success
+      // We use the CAPTURED navigators, ignoring 'mounted' check since we know the loader is there
+      rootNavigator.pop(); // Close Loading Spinner
+      dialogNavigator.pop(); // Close Request List Dialog
+
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text("Promise accepted successfully!"),
+          backgroundColor: AppStyles.successGreen,
+        ),
+      );
+    } catch (e) {
+      // Handle Error
+      rootNavigator.pop(); // Ensure Loader closes
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text("Error: $e"),
+          backgroundColor: AppStyles.errorRed,
+        ),
+      );
+    }
+  }
+
   void _showRequestsDialog(UserModel friend) {
     showDialog(
       context: context,
@@ -160,16 +213,7 @@ class _FriendsScreenState extends State<FriendsScreen>
                                 Icons.check,
                                 color: AppStyles.successGreen,
                               ),
-                              onPressed: () async {
-                                await db.acceptPromiseRequest(req);
-                                if (mounted) Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Promise accepted!"),
-                                    backgroundColor: AppStyles.successGreen,
-                                  ),
-                                );
-                              },
+                              onPressed: () => _handleAcceptPromise(context, db, req),
                             ),
                             IconButton(
                               icon: const Icon(
@@ -208,7 +252,6 @@ class _FriendsScreenState extends State<FriendsScreen>
       appBar: AppBar(
         title: const Text('Friends'),
         centerTitle: true,
-        // --- ADDED ACTIONS ---
         actions: [
           IconButton(
             icon: const Icon(Icons.person_outline),
@@ -218,7 +261,6 @@ class _FriendsScreenState extends State<FriendsScreen>
             icon: const Icon(Icons.add),
             onPressed: () async {
               await Navigator.pushNamed(context, '/new-promise');
-              // Ensure we reload promise provider if a promise was created
               if (mounted) {
                 Provider.of<PromiseProvider>(context, listen: false).reload();
               }
@@ -248,13 +290,10 @@ class _FriendsScreenState extends State<FriendsScreen>
           ],
         ),
       ),
-
-      // TAB CONTENT
       body: TabBarView(
         controller: _tabController,
         children: [_friendsTab(provider), _requestsTab(provider)],
       ),
-
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddFriendDialog,
         backgroundColor: AppStyles.primaryPurple,
@@ -296,7 +335,8 @@ class _FriendsScreenState extends State<FriendsScreen>
           itemCount: friends.length,
           itemBuilder: (context, index) {
             final friend = friends[index];
-            final initials = friend.displayName.isNotEmpty
+            final initials =
+            friend.displayName.isNotEmpty
                 ? friend.displayName[0].toUpperCase()
                 : '?';
 
@@ -328,7 +368,7 @@ class _FriendsScreenState extends State<FriendsScreen>
     );
   }
 
-  // ---------------- REQUESTS TAB ----------------
+  // ---------------- FRIEND REQUESTS TAB ----------------
   Widget _requestsTab(FriendsProvider provider) {
     return StreamBuilder<List<UserModel>>(
       stream: provider.requestsStream,
@@ -347,8 +387,10 @@ class _FriendsScreenState extends State<FriendsScreen>
           padding: const EdgeInsets.all(16),
           itemCount: requests.length,
           itemBuilder: (context, index) {
+            // This 'req' is a Friend Request (UserModel), NOT a PromiseRequestModel
             final req = requests[index];
-            final initials = req.displayName.isNotEmpty
+            final initials =
+            req.displayName.isNotEmpty
                 ? req.displayName[0].toUpperCase()
                 : '?';
 
@@ -366,7 +408,6 @@ class _FriendsScreenState extends State<FriendsScreen>
                       ),
                     ),
                     const SizedBox(width: 12),
-
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,7 +426,6 @@ class _FriendsScreenState extends State<FriendsScreen>
                         ],
                       ),
                     ),
-
                     IconButton(
                       icon: const Icon(
                         Icons.check_circle,
