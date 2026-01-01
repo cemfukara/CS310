@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../utils/app_styles.dart';
 import '../models/promise_model.dart';
 import '../providers/promise_provider.dart';
+import '../providers/auth_provider.dart';
 
 class EditPromiseScreen extends StatefulWidget {
   const EditPromiseScreen({super.key});
@@ -15,6 +16,7 @@ class EditPromiseScreen extends StatefulWidget {
 class _EditPromiseScreenState extends State<EditPromiseScreen> {
   late PromiseModel _originalPromise;
   bool _isInit = false;
+  bool _canEdit = true; // --- NEW: Permission flag
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
@@ -22,7 +24,6 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
   int difficultyStars = 3;
   static const String fullDateTimeFormat = 'dd/MMM/yy HH:mm';
 
-  // --- CATEGORY STATE ---
   String _selectedCategory = 'Personal';
   final List<String> _categories = ['Work', 'Personal', 'Health', 'Family'];
 
@@ -35,6 +36,13 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
       final args = ModalRoute.of(context)!.settings.arguments;
       if (args is PromiseModel) {
         _originalPromise = args;
+
+        // --- CHECK PERMISSIONS ---
+        final currentUser = Provider.of<AuthProvider>(context, listen: false).user;
+        if (currentUser != null) {
+          _canEdit = _originalPromise.createdBy == currentUser.uid;
+        }
+
         _initializeData(_originalPromise);
       }
       _isInit = true;
@@ -46,7 +54,6 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
     _descriptionController.text = promise.description;
     difficultyStars = promise.priority;
 
-    // Initialize Category (fallback to Personal if not in list)
     if (_categories.contains(promise.category)) {
       _selectedCategory = promise.category;
     } else {
@@ -78,7 +85,6 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
     try {
       final provider = Provider.of<PromiseProvider>(context, listen: false);
 
-      // 1. UPDATE EXISTING
       if (dynamicSlots.isNotEmpty) {
         final mainSlot = dynamicSlots[0];
         final durMap = mainSlot['duration'] as Map<String, int>;
@@ -91,14 +97,13 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
           durationMinutes: totalMinutes,
           isRecursive: mainSlot['is_recurring'],
           isCompleted: mainSlot['completed'],
-          category: _selectedCategory, // --- UPDATE CATEGORY ---
+          category: _selectedCategory,
           priority: difficultyStars,
         );
 
         await provider.updatePromise(updatedPromise);
       }
 
-      // 2. ADD EXTRA SLOTS (as new promises)
       if (dynamicSlots.length > 1) {
         for (int i = 1; i < dynamicSlots.length; i++) {
           final slot = dynamicSlots[i];
@@ -112,7 +117,7 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
               startTime: slot['start'],
               durationMinutes: totalMinutes,
               isRecursive: slot['is_recurring'] ?? false,
-              category: _selectedCategory, // --- USE NEW CATEGORY ---
+              category: _selectedCategory,
               priority: difficultyStars,
             );
           }
@@ -120,8 +125,8 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
       }
 
       if (mounted) {
-        Navigator.pop(context); // Close Loader
-        Navigator.pop(context); // Go back
+        Navigator.pop(context);
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Changes saved!')));
       }
     } catch (e) {
@@ -149,6 +154,9 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
   }
 
   Future<void> _pickStartDate(int index) async {
+    // Disable if not allowed
+    if (!_canEdit) return;
+
     DateTime now = DateTime.now();
     DateTime? initialDate = dynamicSlots[index]['start'];
     initialDate ??= now;
@@ -180,6 +188,9 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
   }
 
   void _pickDuration(int index) async {
+    // Disable if not allowed
+    if (!_canEdit) return;
+
     final currentDuration = dynamicSlots[index]['duration'] as Map<String, int>;
     TextEditingController hCtrl = TextEditingController(text: currentDuration['hours'].toString());
     TextEditingController mCtrl = TextEditingController(text: currentDuration['minutes'].toString());
@@ -216,9 +227,32 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'Name')),
+            if (!_canEdit)
+              Container(
+                padding: const EdgeInsets.all(8),
+                margin: const EdgeInsets.only(bottom: 16),
+                color: Colors.amber.shade100,
+                child: Row(
+                  children: const [
+                    Icon(Icons.lock, color: Colors.orange),
+                    SizedBox(width: 8),
+                    Expanded(child: Text("You can only view this shared promise."))
+                  ],
+                ),
+              ),
+
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(labelText: 'Name'),
+              enabled: _canEdit, // DISABLE
+            ),
             const SizedBox(height: 10),
-            TextField(controller: _descriptionController, decoration: const InputDecoration(labelText: 'Description'), maxLines: 3),
+            TextField(
+              controller: _descriptionController,
+              decoration: const InputDecoration(labelText: 'Description'),
+              maxLines: 3,
+              enabled: _canEdit, // DISABLE
+            ),
             const SizedBox(height: 10),
 
             // --- CATEGORY SELECTOR IN EDIT MODE ---
@@ -232,9 +266,9 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
                   return ChoiceChip(
                     label: Text(c),
                     selected: _selectedCategory == c,
-                    onSelected: (val) {
+                    onSelected: _canEdit ? (val) { // DISABLE SELECTION
                       if (val) setState(() => _selectedCategory = c);
-                    },
+                    } : null,
                     selectedColor: AppStyles.primaryPurple,
                     labelStyle: TextStyle(color: _selectedCategory == c ? Colors.white : Colors.black),
                   );
@@ -255,22 +289,29 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      IconButton(icon: const Icon(Icons.edit_calendar), onPressed: () => _pickStartDate(index)),
-                      IconButton(icon: const Icon(Icons.timer), onPressed: () => _pickDuration(index)),
-                      if (index > 0) IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _removeSlot(index)),
+                      // Only show editing icons if owner
+                      if (_canEdit) ...[
+                        IconButton(icon: const Icon(Icons.edit_calendar), onPressed: () => _pickStartDate(index)),
+                        IconButton(icon: const Icon(Icons.timer), onPressed: () => _pickDuration(index)),
+                        if (index > 0) IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _removeSlot(index)),
+                      ]
                     ],
                   ),
                 ),
               );
             }),
-            if (dynamicSlots.isNotEmpty)
+
+            if (_canEdit && dynamicSlots.isNotEmpty)
               TextButton.icon(icon: const Icon(Icons.add), label: const Text('Add Slot'), onPressed: _addSlot),
+
             const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _handleSaveChanges,
-              style: ElevatedButton.styleFrom(backgroundColor: AppStyles.primaryPurple, minimumSize: const Size(double.infinity, 50)),
-              child: const Text('Save Changes', style: TextStyle(color: Colors.white)),
-            ),
+
+            if (_canEdit)
+              ElevatedButton(
+                onPressed: _handleSaveChanges,
+                style: ElevatedButton.styleFrom(backgroundColor: AppStyles.primaryPurple, minimumSize: const Size(double.infinity, 50)),
+                child: const Text('Save Changes', style: TextStyle(color: Colors.white)),
+              ),
           ],
         ),
       ),

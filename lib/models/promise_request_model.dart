@@ -11,6 +11,7 @@ class PromiseRequestModel {
   final String category;
   final int priority;
   final DateTime sentAt;
+  final String? linkedPromiseId; // New field to link to real doc
 
   PromiseRequestModel({
     required this.id,
@@ -23,6 +24,7 @@ class PromiseRequestModel {
     required this.category,
     required this.priority,
     required this.sentAt,
+    this.linkedPromiseId,
   });
 
   factory PromiseRequestModel.fromFirestore(DocumentSnapshot doc) {
@@ -38,6 +40,7 @@ class PromiseRequestModel {
       category: data['category'] ?? 'General',
       priority: data['priority'] ?? 3,
       sentAt: (data['sentAt'] as Timestamp).toDate(),
+      linkedPromiseId: data['linkedPromiseId'],
     );
   }
 
@@ -52,6 +55,7 @@ class PromiseRequestModel {
       'category': category,
       'priority': priority,
       'sentAt': Timestamp.fromDate(sentAt),
+      'linkedPromiseId': linkedPromiseId,
     };
   }
 }

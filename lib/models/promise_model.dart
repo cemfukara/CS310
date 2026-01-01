@@ -5,7 +5,7 @@ class PromiseModel {
   final String title;
   final String description;
   final DateTime startTime;
-  final int durationMinutes; // Changed from endTime to duration
+  final int durationMinutes;
   final bool isRecursive;
   final bool isCompleted;
   final String createdBy;
@@ -13,6 +13,7 @@ class PromiseModel {
   final String category;
   final int priority;
   final String? sharedBy;
+  final List<String> participants; // New field
 
   PromiseModel({
     required this.id,
@@ -27,12 +28,11 @@ class PromiseModel {
     this.category = 'General',
     this.priority = 1,
     this.sharedBy,
+    this.participants = const [],
   });
 
-  /// Helper to calculate endTime dynamically
   DateTime get endTime => startTime.add(Duration(minutes: durationMinutes));
 
-  /// Factory constructor to create a PromiseModel from a Firestore Document
   factory PromiseModel.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
@@ -43,7 +43,6 @@ class PromiseModel {
       startTime: (data['startTime'] is Timestamp)
           ? (data['startTime'] as Timestamp).toDate()
           : DateTime.now(),
-      // Handle legacy data or new duration format
       durationMinutes: data['durationMinutes'] ?? 60,
       isRecursive: data['isRecursive'] ?? false,
       isCompleted: data['isCompleted'] ?? false,
@@ -54,16 +53,16 @@ class PromiseModel {
       category: data['category'] ?? 'General',
       priority: data['priority'] ?? 1,
       sharedBy: data['sharedBy'],
+      participants: List<String>.from(data['participants'] ?? []),
     );
   }
 
-  /// Convert PromiseModel to Map for Firestore
   Map<String, dynamic> toMap() {
     return {
       'title': title,
       'description': description,
       'startTime': Timestamp.fromDate(startTime),
-      'durationMinutes': durationMinutes, // Save duration
+      'durationMinutes': durationMinutes,
       'isRecursive': isRecursive,
       'isCompleted': isCompleted,
       'createdBy': createdBy,
@@ -71,6 +70,7 @@ class PromiseModel {
       'category': category,
       'priority': priority,
       'sharedBy': sharedBy,
+      'participants': participants,
     };
   }
 
@@ -87,6 +87,7 @@ class PromiseModel {
     String? category,
     int? priority,
     String? sharedBy,
+    List<String>? participants,
   }) {
     return PromiseModel(
       id: id ?? this.id,
@@ -101,6 +102,7 @@ class PromiseModel {
       category: category ?? this.category,
       priority: priority ?? this.priority,
       sharedBy: sharedBy ?? this.sharedBy,
+      participants: participants ?? this.participants,
     );
   }
 }

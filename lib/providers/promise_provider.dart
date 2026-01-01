@@ -16,15 +16,20 @@ class PromiseProvider with ChangeNotifier {
 
   void updateDatabase(DatabaseService db) {
     _db = db;
-    notifyListeners();
+    // CRITICAL FIX: Restart listener when user changes so we don't show old data
+    _listenToPromises();
   }
 
   List<PromiseModel> get promises => _promises;
   bool get isLoading => _isLoading;
 
   void _listenToPromises() {
+    // 1. Clear old data immediately to prevent leakage
+    _promises = [];
     _isLoading = true;
     notifyListeners();
+
+    // 2. Cancel old subscription and start new one
     _promisesSubscription?.cancel();
     _promisesSubscription = _db.getPromisesStream().listen(
           (promiseList) {
@@ -45,35 +50,31 @@ class PromiseProvider with ChangeNotifier {
     await Future.delayed(const Duration(milliseconds: 500));
   }
 
-  // --- UPDATED ADD METHOD ---
-  Future<void> addPromise({
+  // Updated: Returns the ID of the created promise
+  Future<String> addPromise({
     required String title,
     required String description,
     required DateTime startTime,
-    required int durationMinutes, // Updated
+    required int durationMinutes,
     required bool isRecursive,
     required String category,
     required int priority,
   }) async {
-    await _db.createPromise(
+    final id = await _db.createPromise(
       title: title,
       description: description,
       startTime: startTime,
-      durationMinutes: durationMinutes, // Updated
+      durationMinutes: durationMinutes,
       isRecursive: isRecursive,
       category: category,
       priority: priority,
     );
     await _db.unlockAchievement('first_promise');
+    return id;
   }
 
   Future<void> updatePromise(PromiseModel promise) async {
-    try {
-      await _db.updatePromise(promise);
-    } catch (e) {
-      print("Error updating promise: $e");
-      rethrow;
-    }
+    await _db.updatePromise(promise);
   }
 
   Future<void> deletePromise(String id) async {
@@ -82,7 +83,6 @@ class PromiseProvider with ChangeNotifier {
       notifyListeners();
       await _db.deletePromise(id);
     } catch (e) {
-      print("Error deleting promise: $e");
       _listenToPromises();
     }
   }
@@ -97,7 +97,6 @@ class PromiseProvider with ChangeNotifier {
         _promises[index] = updatedPromise;
         notifyListeners();
 
-        await _db.updatePromise(updatedPromise);
         await _db.updatePromise(updatedPromise);
 
         if (newStatus == true) {
