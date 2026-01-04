@@ -25,19 +25,19 @@ abstract class DatabaseService {
   Future<void> createPublicUser(String uid, String email, String displayName);
   Future<UserModel?> searchUserByEmail(String email);
   Future<void> sendFriendRequest(
-      String currentUid,
-      String currentName,
-      String currentEmail,
-      String targetUid,
-      );
+    String currentUid,
+    String currentName,
+    String currentEmail,
+    String targetUid,
+  );
   Future<void> acceptFriendRequest(
-      String currentUid,
-      String currentName,
-      String currentEmail,
-      String requestUid,
-      String requestName,
-      String requestEmail,
-      );
+    String currentUid,
+    String currentName,
+    String currentEmail,
+    String requestUid,
+    String requestName,
+    String requestEmail,
+  );
   Future<void> declineFriendRequest(String currentUid, String requestUid);
   Stream<List<UserModel>> getFriendRequestsStream();
   Stream<List<UserModel>> getFriendsStream();
@@ -51,12 +51,13 @@ abstract class DatabaseService {
 
   // --- PROMISE REQUESTS ---
   Future<void> sendPromiseRequest(
-      String targetUid,
-      PromiseRequestModel request,
-      );
+    String targetUid,
+    PromiseRequestModel request,
+  );
   Stream<List<PromiseRequestModel>> getPromiseRequestsStream();
   Future<void> acceptPromiseRequest(PromiseRequestModel request);
   Future<void> declinePromiseRequest(String requestId);
 
   Future<void> equipBadge(String badges);
+  Future<void> equipAvatar(String avatarId);
 }

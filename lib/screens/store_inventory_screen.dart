@@ -4,26 +4,12 @@ import '../utils/app_styles.dart';
 import '../providers/gamification_provider.dart';
 
 class StoreInventoryScreen extends StatefulWidget {
-  const StoreInventoryScreen({super.key});
+  final bool initialShowStore;
 
-  @override
-  State<StoreInventoryScreen> createState() => _StoreInventoryScreenState();
-}
+  const StoreInventoryScreen({super.key, this.initialShowStore = true});
 
-class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
-  bool showStore = true;
-
-  final List<String> categories = [
-    "All",
-    "Badges",
-    "Themes",
-    "Powerups",
-    "Avatars",
-  ];
-
-  String selectedCategory = "All";
-
-  final List<Map<String, dynamic>> storeItems = [
+  // Publicly accessible for other screens to resolve Icons
+  static final List<Map<String, dynamic>> storeItems = [
     {
       "name": "Achiever Badge",
       "price": 0,
@@ -39,48 +25,39 @@ class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
       "category": "Badges",
     },
     {
-      "name": "Dark Theme Pro",
-      "price": 150,
-      "icon": Icons.palette,
-      "owned": false,
-      "category": "Themes",
-    },
-    {
-      "name": "Ocean Blue Theme",
-      "price": 150,
-      "icon": Icons.palette,
-      "owned": false,
-      "category": "Themes",
-    },
-    {
-      "name": "Double Points",
-      "price": 100,
-      "icon": Icons.bolt,
-      "owned": false,
-      "category": "Powerups",
-    },
-    {
-      "name": "Skip Promise",
-      "price": 80,
-      "icon": Icons.skip_next,
-      "owned": false,
-      "category": "Powerups",
-    },
-    {
-      "name": "Ninja Avatar",
+      "name": "Trophy Avatar",
       "price": 120,
-      "icon": Icons.person,
+      "icon": Icons.emoji_events_outlined,
       "owned": false,
       "category": "Avatars",
     },
     {
-      "name": "Galaxy Avatar",
+      "name": "Star Avatar",
       "price": 180,
-      "icon": Icons.person,
+      "icon": Icons.star_border,
       "owned": false,
       "category": "Avatars",
     },
   ];
+
+  @override
+  State<StoreInventoryScreen> createState() => _StoreInventoryScreenState();
+}
+
+class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
+  late bool showStore;
+
+  @override
+  void initState() {
+    super.initState();
+    showStore = widget.initialShowStore;
+  }
+
+  final List<String> categories = ["All", "Badges", "Avatars"];
+
+  String selectedCategory = "All";
+
+  // storeItems moved to StoreInventoryScreen class
 
   @override
   Widget build(BuildContext context) {
@@ -101,7 +78,12 @@ class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
                 children: [
                   Icon(Icons.monetization_on, color: AppStyles.warningOrange),
                   const SizedBox(width: 4),
-                  Text("${provider.stats.coins}", style: AppStyles.bodyLarge),
+                  Text(
+                    "${provider.stats.coins}",
+                    style: AppStyles.bodyLarge.copyWith(
+                      color: const Color.fromARGB(255, 253, 253, 253),
+                    ),
+                  ),
                   const SizedBox(width: 16),
                 ],
               ),
@@ -194,9 +176,17 @@ class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
   }
 
   Widget _buildStoreGrid(GamificationProvider provider) {
+    // Filter out items that are not in the current categories list
+    final validItems = StoreInventoryScreen.storeItems
+        .where(
+          (i) =>
+              categories.contains(i["category"]) || categories.contains("All"),
+        )
+        .toList();
+
     final filtered = selectedCategory == "All"
-        ? storeItems
-        : storeItems.where((i) => i["category"] == selectedCategory).toList();
+        ? validItems
+        : validItems.where((i) => i["category"] == selectedCategory).toList();
 
     return GridView.builder(
       padding: const EdgeInsets.all(16),
@@ -224,7 +214,7 @@ class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
   }
 
   Widget _buildInventoryGrid(GamificationProvider provider) {
-    final userInventory = storeItems
+    final userInventory = StoreInventoryScreen.storeItems
         .where((item) => provider.hasItem(item["name"]))
         .toList();
 
@@ -362,7 +352,12 @@ class _StoreInventoryScreenState extends State<StoreInventoryScreen> {
                 const SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: () async {
-                    await provider.equipBadge(item["name"]);
+                    if (item["category"] == "Badges") {
+                      await provider.equipBadge(item["name"]);
+                    } else if (item["category"] == "Avatars") {
+                      await provider.equipAvatar(item["name"]);
+                    }
+
                     if (!mounted) return;
                     Navigator.pop(context);
 

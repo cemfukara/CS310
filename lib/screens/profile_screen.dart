@@ -4,6 +4,7 @@ import '../utils/app_styles.dart';
 import '../providers/auth_provider.dart';
 import '../providers/gamification_provider.dart';
 import 'settings_screen.dart';
+import 'store_inventory_screen.dart';
 
 /// Profile Screen - Displays real user data from Firebase Auth
 class ProfileScreen extends StatefulWidget {
@@ -26,6 +27,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // Gamification
     final gamification = Provider.of<GamificationProvider>(context);
     final equippedBadges = gamification.stats.equippedBadges;
+    final equippedAvatarName = gamification.stats.equippedAvatar;
+
+    // Resolve Avatar Icon
+    IconData? avatarIcon;
+    if (equippedAvatarName != null) {
+      final avatarItem = StoreInventoryScreen.storeItems.firstWhere(
+        (item) => item['name'] == equippedAvatarName,
+        orElse: () => {},
+      );
+      if (avatarItem.isNotEmpty) {
+        avatarIcon = avatarItem['icon'] as IconData;
+      }
+    }
 
     // --- Name Parsing ---
     String firstName = '';
@@ -86,14 +100,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       boxShadow: AppStyles.shadowMedium,
                     ),
                     child: Center(
-                      child: Text(
-                        firstName.isNotEmpty ? firstName[0].toUpperCase() : '?',
-                        style: const TextStyle(
-                          fontSize: 60,
-                          fontWeight: FontWeight.bold,
-                          color: AppStyles.primaryPurple,
-                        ),
-                      ),
+                      child: avatarIcon != null
+                          ? Icon(
+                              avatarIcon,
+                              size: 80,
+                              color: AppStyles.primaryPurple,
+                            )
+                          : Text(
+                              firstName.isNotEmpty
+                                  ? firstName[0].toUpperCase()
+                                  : '?',
+                              style: const TextStyle(
+                                fontSize: 60,
+                                fontWeight: FontWeight.bold,
+                                color: AppStyles.primaryPurple,
+                              ),
+                            ),
                     ),
                   ),
 
@@ -192,6 +214,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: AppStyles.paddingXLarge),
 
             // ───────── ACTION BUTTONS ─────────
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        const StoreInventoryScreen(initialShowStore: false),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.inventory_2_outlined),
+              label: const Text('My Inventory'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppStyles.paddingMedium,
+                ),
+                backgroundColor: AppStyles.primaryPurple,
+                foregroundColor: Colors.white,
+              ),
+            ),
+
+            const SizedBox(height: AppStyles.paddingMedium),
+
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.push(
