@@ -298,8 +298,6 @@ class AppStyles {
 
       cardColor: isDarkMode ? darkGray : white,
 
-      dialogBackgroundColor: isDarkMode ? darkGray : white,
-
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryPurple,
         brightness: isDarkMode ? Brightness.dark : Brightness.light,
@@ -425,6 +423,9 @@ class AppStyles {
         labelMedium: labelMedium.copyWith(
           color: isDarkMode ? primaryPurpleLight : primaryPurple,
         ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: isDarkMode ? darkGray : white,
       ),
     );
   }

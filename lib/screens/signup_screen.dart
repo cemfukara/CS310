@@ -45,16 +45,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) return 'Email is required';
     final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
-    if (!emailRegex.hasMatch(value))
+    if (!emailRegex.hasMatch(value)) {
       return 'Please enter a valid email address';
+    }
     return null;
   }
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) return 'Password is required';
     if (value.length < 6) return 'Password must be at least 6 characters';
-    if (!RegExp(r'[A-Z]').hasMatch(value))
+    if (!RegExp(r'[A-Z]').hasMatch(value)) {
       return 'At least one uppercase letter';
+    }
     if (!RegExp(r'[0-9]').hasMatch(value)) return 'At least one number';
     return null;
   }
@@ -133,10 +135,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
         }
       } on FirebaseAuthException catch (e) {
         String errorMessage = e.message ?? 'An unknown error occurred.';
-        if (e.code == 'email-already-in-use')
+        if (e.code == 'email-already-in-use') {
           errorMessage = 'This email is already registered.';
-        if (e.code == 'weak-password')
+        }
+        if (e.code == 'weak-password') {
           errorMessage = 'The password provided is too weak.';
+        }
 
         if (mounted) _showErrorDialog('Registration Failed', errorMessage);
       } catch (e) {

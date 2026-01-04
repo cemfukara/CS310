@@ -36,7 +36,7 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
     },
   ];
 
-  List<String> _selectedFriendUids = [];
+  final List<String> _selectedFriendUids = [];
 
   @override
   void dispose() {
@@ -293,8 +293,9 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
       DateTime targetDate = now.add(
         Duration(days: (targetWeekday - currentWeekday + 7) % 7),
       );
-      if (targetDate.isBefore(now))
+      if (targetDate.isBefore(now)) {
         targetDate = targetDate.add(const Duration(days: 7));
+      }
 
       final DateTime finalDateTime = DateTime(
         targetDate.year,
