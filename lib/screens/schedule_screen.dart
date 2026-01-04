@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../utils/app_styles.dart';
 import '../providers/promise_provider.dart';
+import '../providers/gamification_provider.dart';
 import '../models/promise_model.dart';
 
 class ScheduleScreen extends StatefulWidget {
@@ -151,15 +152,25 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               ),
               onPressed: (isActuallyCompleted && !promise.isRecursive)
                   ? null
-                  : () {
-                      Provider.of<PromiseProvider>(
+                  : () async {
+                      final provider = Provider.of<PromiseProvider>(
                         context,
                         listen: false,
-                      ).toggleStatus(
+                      );
+                      final gamification = Provider.of<GamificationProvider>(
+                        context,
+                        listen: false,
+                      );
+
+                      await provider.toggleStatus(
                         promise.id,
                         !isActuallyCompleted,
                         date: _selectedDate,
                       );
+
+                      if (!isActuallyCompleted) {
+                        await gamification.handlePromiseCompletion();
+                      }
                     },
             ),
           ],

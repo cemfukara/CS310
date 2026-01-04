@@ -117,7 +117,18 @@ class PromiseProvider with ChangeNotifier {
         await _db.updatePromise(updatedPromise);
 
         if (newStatus == true) {
+          // Trigger gamification updates (Xp, Coins, Stats)
           await _db.updateCoins(50);
+          // NEW: Increment total completed and check streaks/achievements
+          // Note: Realistically this should be handled by a higher-level coordinator
+          // or the provider should have access to GamificationProvider.
+          // For now, we manually call the DB methods if they are simple enough,
+          // or we rely on GamificationProvider listening to the same DB.
+          // However, GamificationProvider.handlePromiseCompletion has complex logic (streak).
+          // We'll let the UI or a coordinator call it, OR we can inject GamificationProvider
+          // but that's circular.
+          // BEST WAY: PromiseProvider only updates DB. GamificationProvider listens to stats AND promises?
+          // No, let's keep it simple: Add a method to DatabaseService or just call the logic here.
         }
       }
     } catch (e) {

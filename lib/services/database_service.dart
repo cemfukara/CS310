@@ -48,6 +48,8 @@ abstract class DatabaseService {
   Future<void> updateCoins(int amount);
   Future<void> unlockItem(String itemId);
   Future<void> unlockAchievement(String achievementId);
+  Future<void> incrementCompletedPromises();
+  Future<void> updateStreak(int currentStreak, String? lastStreakDate);
 
   // --- PROMISE REQUESTS ---
   Future<void> sendPromiseRequest(

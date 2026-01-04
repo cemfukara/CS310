@@ -8,6 +8,7 @@ class UserStatsModel {
   final String? equippedAvatar; // ID/Name of the equipped avatar
   final int totalPromisesCompleted;
   final int currentStreak;
+  final String? lastStreakDate; // "yyyy-MM-dd"
 
   UserStatsModel({
     this.coins = 0,
@@ -19,6 +20,7 @@ class UserStatsModel {
     this.equippedAvatar,
     this.totalPromisesCompleted = 0,
     this.currentStreak = 0,
+    this.lastStreakDate,
   });
 
   factory UserStatsModel.fromMap(Map<String, dynamic> data) {
@@ -32,6 +34,7 @@ class UserStatsModel {
       equippedAvatar: data['equippedAvatar'],
       totalPromisesCompleted: data['totalPromisesCompleted'] ?? 0,
       currentStreak: data['currentStreak'] ?? 0,
+      lastStreakDate: data['lastStreakDate'],
     );
   }
 
@@ -46,6 +49,7 @@ class UserStatsModel {
       'equippedAvatar': equippedAvatar,
       'totalPromisesCompleted': totalPromisesCompleted,
       'currentStreak': currentStreak,
+      'lastStreakDate': lastStreakDate,
     };
   }
 }

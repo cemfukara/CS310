@@ -276,6 +276,33 @@ class FirestoreService implements DatabaseService {
     }, SetOptions(merge: true));
   }
 
+  @override
+  Future<void> incrementCompletedPromises() async {
+    if (_userId == null) return;
+    final ref = _db
+        .collection('users')
+        .doc(_userId)
+        .collection('gamification')
+        .doc('stats');
+    await ref.set({
+      'totalPromisesCompleted': FieldValue.increment(1),
+    }, SetOptions(merge: true));
+  }
+
+  @override
+  Future<void> updateStreak(int currentStreak, String? lastStreakDate) async {
+    if (_userId == null) return;
+    final ref = _db
+        .collection('users')
+        .doc(_userId)
+        .collection('gamification')
+        .doc('stats');
+    await ref.set({
+      'currentStreak': currentStreak,
+      'lastStreakDate': lastStreakDate,
+    }, SetOptions(merge: true));
+  }
+
   // --- PROMISE REQUESTS IMPLEMENTATION ---
 
   @override

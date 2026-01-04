@@ -242,8 +242,7 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
 
     return filteredAchievements.map((achievement) {
       final isUnlocked = provider.hasAchievement(achievement['id']);
-      // For now, we mock progress for locked items since we don't store individual progress yet
-      final progress = isUnlocked ? achievement['target'] as int : 0;
+      final progress = provider.getAchievementProgress(achievement['id']);
       final target = achievement['target'] as int;
       final progressPercent = (progress / target).clamp(0.0, 1.0);
 
@@ -374,8 +373,8 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
     Map<String, dynamic> achievement,
     bool isUnlocked,
   ) {
-    // For manual showDialog calls, we just reuse the calculated isUnlocked
-    int progress = isUnlocked ? achievement['target'] : 0;
+    final provider = Provider.of<GamificationProvider>(context, listen: false);
+    int progress = provider.getAchievementProgress(achievement['id']);
     int target = achievement['target'];
 
     showDialog(
