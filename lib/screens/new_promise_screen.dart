@@ -30,7 +30,10 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
   final List<String> _categories = ['Work', 'Personal', 'Health', 'Family'];
 
   List<Map<String, dynamic>> dynamicSlots = [
-    {'start': null, 'duration': {'hours': 1, 'minutes': 0}},
+    {
+      'start': null,
+      'duration': {'hours': 1, 'minutes': 0},
+    },
   ];
 
   List<String> _selectedFriendUids = [];
@@ -61,7 +64,10 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
     );
 
     try {
-      final promiseProvider = Provider.of<PromiseProvider>(context, listen: false);
+      final promiseProvider = Provider.of<PromiseProvider>(
+        context,
+        listen: false,
+      );
 
       // Keep track of IDs created to link them for sharing
       List<String> createdPromiseIds = [];
@@ -116,9 +122,9 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
   }
 
   Future<void> _sendLinkedPromiseRequests(
-      List<String> promiseIds,
-      List<Map<String, dynamic>> slotData
-      ) async {
+    List<String> promiseIds,
+    List<Map<String, dynamic>> slotData,
+  ) async {
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final db = Provider.of<DatabaseService>(context, listen: false);
@@ -155,7 +161,12 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
   }
 
   void _addSlot() {
-    setState(() => dynamicSlots.add({'start': null, 'duration': {'hours': 1, 'minutes': 0}}));
+    setState(
+      () => dynamicSlots.add({
+        'start': null,
+        'duration': {'hours': 1, 'minutes': 0},
+      }),
+    );
   }
 
   void _removeSlot(int index) {
@@ -179,17 +190,33 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
     final DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: initialDate,
-      firstDate: DateTime(now.year - 5),
+      firstDate: DateTime(now.year, now.month, now.day),
       lastDate: DateTime(now.year + 5),
     );
     if (pickedDate == null) return;
 
     if (!mounted) return;
+
     final TimeOfDay? pickedTime = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(initialDate),
     );
     if (pickedTime == null) return;
+
+    final DateTime pickedDateTime = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    );
+
+    if (pickedDateTime.isBefore(now)) {
+      _showErrorSnackbar(
+        "Invalid time. Please select a time after ${TimeOfDay.fromDateTime(now).format(context)}.",
+      );
+      return;
+    }
 
     setState(() {
       dynamicSlots[index]['start'] = DateTime(
@@ -203,7 +230,15 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
   }
 
   Future<void> _pickDayTime(int index) async {
-    final List<String> weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final List<String> weekdays = [
+      'Mon',
+      'Tue',
+      'Wed',
+      'Thu',
+      'Fri',
+      'Sat',
+      'Sun',
+    ];
     String? selectedDay = weekdays[0];
 
     await showDialog(
@@ -213,11 +248,16 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
           title: const Text('Select Day of Week'),
           content: DropdownButtonFormField<String>(
             initialValue: selectedDay,
-            items: weekdays.map((day) => DropdownMenuItem(value: day, child: Text(day))).toList(),
+            items: weekdays
+                .map((day) => DropdownMenuItem(value: day, child: Text(day)))
+                .toList(),
             onChanged: (newValue) => selectedDay = newValue,
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
             TextButton(
               onPressed: () => Navigator.pop(context, selectedDay),
               child: const Text('OK'),
@@ -239,8 +279,11 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
       final int dayIndex = weekdays.indexOf(resultDay.toString());
       int targetWeekday = dayIndex + 1;
 
-      DateTime targetDate = now.add(Duration(days: (targetWeekday - currentWeekday + 7) % 7));
-      if (targetDate.isBefore(now)) targetDate = targetDate.add(const Duration(days: 7));
+      DateTime targetDate = now.add(
+        Duration(days: (targetWeekday - currentWeekday + 7) % 7),
+      );
+      if (targetDate.isBefore(now))
+        targetDate = targetDate.add(const Duration(days: 7));
 
       final DateTime finalDateTime = DateTime(
         targetDate.year,
@@ -258,8 +301,12 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
 
   void _pickDuration(int index) async {
     final currentDuration = dynamicSlots[index]['duration'] as Map<String, int>;
-    TextEditingController hoursController = TextEditingController(text: currentDuration['hours'].toString());
-    TextEditingController minutesController = TextEditingController(text: currentDuration['minutes'].toString());
+    TextEditingController hoursController = TextEditingController(
+      text: currentDuration['hours'].toString(),
+    );
+    TextEditingController minutesController = TextEditingController(
+      text: currentDuration['minutes'].toString(),
+    );
 
     await showDialog(
       context: context,
@@ -299,7 +346,10 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
             ],
           ),
           actions: <Widget>[
-            TextButton(child: const Text('Cancel'), onPressed: () => Navigator.pop(context)),
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () => Navigator.pop(context),
+            ),
             TextButton(
               child: const Text('Set'),
               onPressed: () {
@@ -310,7 +360,10 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
                   return;
                 }
                 setState(() {
-                  dynamicSlots[index]['duration'] = {'hours': hours, 'minutes': minutes};
+                  dynamicSlots[index]['duration'] = {
+                    'hours': hours,
+                    'minutes': minutes,
+                  };
                 });
                 Navigator.pop(context);
               },
@@ -343,11 +396,18 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
           ),
         ],
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      ),
     );
   }
 
-  Widget _buildTimeSlotChip(String label, bool isSelected, {VoidCallback? onTap}) {
+  Widget _buildTimeSlotChip(
+    String label,
+    bool isSelected, {
+    VoidCallback? onTap,
+  }) {
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -355,11 +415,16 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
         decoration: BoxDecoration(
           color: isSelected ? AppStyles.primaryPurple : Colors.grey[200],
           borderRadius: BorderRadius.circular(8.0),
-          border: isSelected ? Border.all(color: AppStyles.primaryPurple) : null,
+          border: isSelected
+              ? Border.all(color: AppStyles.primaryPurple)
+              : null,
         ),
         child: Text(
           label,
-          style: TextStyle(color: isSelected ? AppStyles.white : Colors.black87, fontSize: 14),
+          style: TextStyle(
+            color: isSelected ? AppStyles.white : Colors.black87,
+            fontSize: 14,
+          ),
         ),
       ),
     );
@@ -370,8 +435,14 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppStyles.primaryPurple,
-        title: const Text('New Promise', style: TextStyle(color: AppStyles.white)),
-        leading: IconButton(icon: const Icon(Icons.close, color: Colors.white), onPressed: () => Navigator.pop(context)),
+        title: const Text(
+          'New Promise',
+          style: TextStyle(color: AppStyles.white),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.only(bottom: 20.0),
@@ -395,9 +466,15 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
   Widget _buildNameSection() {
     return _buildCardSection(
       children: [
-        const Text('Name', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const Text(
+          'Name',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         const SizedBox(height: 8),
-        TextField(controller: _nameController, decoration: const InputDecoration(hintText: 'Enter promise name')),
+        TextField(
+          controller: _nameController,
+          decoration: const InputDecoration(hintText: 'Enter promise name'),
+        ),
       ],
     );
   }
@@ -405,9 +482,18 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
   Widget _buildDescriptionSection() {
     return _buildCardSection(
       children: [
-        const Text('Description', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const Text(
+          'Description',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         const SizedBox(height: 8),
-        TextField(controller: _descriptionController, maxLines: 4, decoration: const InputDecoration(hintText: 'Enter promise description')),
+        TextField(
+          controller: _descriptionController,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            hintText: 'Enter promise description',
+          ),
+        ),
       ],
     );
   }
@@ -415,7 +501,10 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
   Widget _buildCategorySection() {
     return _buildCardSection(
       children: [
-        const Text('Category', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const Text(
+          'Category',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         const SizedBox(height: 12),
         Wrap(
           spacing: 10,
@@ -444,11 +533,16 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
 
   Widget _buildSlotsSection() {
     final List<Widget> children = [
-      Row(children: const [
-        Text('Slots', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        SizedBox(width: 8),
-        Icon(Icons.access_time, size: 18, color: Colors.grey),
-      ]),
+      Row(
+        children: const [
+          Text(
+            'Slots',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          SizedBox(width: 8),
+          Icon(Icons.access_time, size: 18, color: Colors.grey),
+        ],
+      ),
       const SizedBox(height: 12),
     ];
 
@@ -479,12 +573,19 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("Slot ${index+1}", style: const TextStyle(fontWeight: FontWeight.w600)),
+                    Text(
+                      "Slot ${index + 1}",
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
                     if (dynamicSlots.length > 1)
                       InkWell(
                         onTap: () => _removeSlot(index),
-                        child: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                      )
+                        child: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                          size: 20,
+                        ),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -494,12 +595,17 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text("Start", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                          const Text(
+                            "Start",
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
                           const SizedBox(height: 4),
                           _buildTimeSlotChip(
                             startLabel,
                             startTime != null,
-                            onTap: () => isRecurring ? _pickDayTime(index) : _pickStartDate(index),
+                            onTap: () => isRecurring
+                                ? _pickDayTime(index)
+                                : _pickStartDate(index),
                           ),
                         ],
                       ),
@@ -509,7 +615,10 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text("Duration", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                          const Text(
+                            "Duration",
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
                           const SizedBox(height: 4),
                           _buildTimeSlotChip(
                             durationLabel,
@@ -536,7 +645,13 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
           children: const [
             Icon(Icons.add_circle_outline, color: AppStyles.primaryPurple),
             SizedBox(width: 5),
-            Text('Add another slot', style: TextStyle(color: AppStyles.primaryPurple, fontWeight: FontWeight.bold)),
+            Text(
+              'Add another slot',
+              style: TextStyle(
+                color: AppStyles.primaryPurple,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
       ),
@@ -544,7 +659,11 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
       Row(
         children: [
           const Text('Recurring Task (Weekly)', style: TextStyle(fontSize: 14)),
-          Checkbox(value: isRecurring, onChanged: _toggleGlobalRecurring, activeColor: AppStyles.primaryPurple),
+          Checkbox(
+            value: isRecurring,
+            onChanged: _toggleGlobalRecurring,
+            activeColor: AppStyles.primaryPurple,
+          ),
         ],
       ),
     ]);
@@ -555,7 +674,10 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
   Widget _buildDifficultySection() {
     return _buildCardSection(
       children: [
-        const Text('Priority', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const Text(
+          'Priority',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         const SizedBox(height: 8),
         Row(
           children: List.generate(5, (index) {
@@ -575,9 +697,14 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
             onPressed: _handleCreatePromise,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppStyles.primaryPurple,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
             ),
-            child: const Text('Create Promise', style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Create Promise',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ),
       ],
@@ -599,7 +726,10 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
         ),
         const SizedBox(height: 8),
         StreamBuilder<List<UserModel>>(
-          stream: Provider.of<FriendsProvider>(context, listen: false).friendsStream,
+          stream: Provider.of<FriendsProvider>(
+            context,
+            listen: false,
+          ).friendsStream,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
