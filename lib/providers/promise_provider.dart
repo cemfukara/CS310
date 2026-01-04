@@ -32,7 +32,7 @@ class PromiseProvider with ChangeNotifier {
     // 2. Cancel old subscription and start new one
     _promisesSubscription?.cancel();
     _promisesSubscription = _db.getPromisesStream().listen(
-          (promiseList) {
+      (promiseList) {
         _promises = promiseList;
         _isLoading = false;
         notifyListeners();
@@ -87,12 +87,29 @@ class PromiseProvider with ChangeNotifier {
     }
   }
 
-  Future<void> toggleStatus(String id, bool newStatus) async {
+  Future<void> toggleStatus(String id, bool newStatus, {DateTime? date}) async {
     try {
       final index = _promises.indexWhere((p) => p.id == id);
       if (index != -1) {
         final promise = _promises[index];
-        final updatedPromise = promise.copyWith(isCompleted: newStatus);
+        PromiseModel updatedPromise;
+
+        if (promise.isRecursive && date != null) {
+          final dateStr =
+              "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+          final newCompletedDates = List<String>.from(promise.completedDates);
+
+          if (newStatus) {
+            if (!newCompletedDates.contains(dateStr)) {
+              newCompletedDates.add(dateStr);
+            }
+          } else {
+            newCompletedDates.remove(dateStr);
+          }
+          updatedPromise = promise.copyWith(completedDates: newCompletedDates);
+        } else {
+          updatedPromise = promise.copyWith(isCompleted: newStatus);
+        }
 
         _promises[index] = updatedPromise;
         notifyListeners();

@@ -55,9 +55,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Widget _buildEventItem(PromiseModel promise) {
+    final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+    final isActuallyCompleted = promise.isRecursive
+        ? promise.completedDates.contains(dateStr)
+        : promise.isCompleted;
+
     final timeStr =
         '${DateFormat('HH:mm').format(promise.startTime)} - ${DateFormat('HH:mm').format(promise.endTime)}';
-    final color = promise.isCompleted
+    final color = isActuallyCompleted
         ? AppStyles.successGreen
         : AppStyles.primaryPurple;
 
@@ -82,7 +87,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   Text(
                     promise.title,
                     style: AppStyles.bodyLarge.copyWith(
-                      decoration: promise.isCompleted
+                      decoration: isActuallyCompleted
                           ? TextDecoration.lineThrough
                           : null,
                     ),
@@ -137,20 +142,24 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             ),
             IconButton(
               icon: Icon(
-                promise.isCompleted
+                isActuallyCompleted
                     ? Icons.check_circle
                     : Icons.radio_button_unchecked,
-                color: promise.isCompleted
+                color: isActuallyCompleted
                     ? AppStyles.successGreen
                     : AppStyles.mediumGray,
               ),
-              onPressed: promise.isCompleted
+              onPressed: (isActuallyCompleted && !promise.isRecursive)
                   ? null
                   : () {
                       Provider.of<PromiseProvider>(
                         context,
                         listen: false,
-                      ).toggleStatus(promise.id, !promise.isCompleted);
+                      ).toggleStatus(
+                        promise.id,
+                        !isActuallyCompleted,
+                        date: _selectedDate,
+                      );
                     },
             ),
           ],

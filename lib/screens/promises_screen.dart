@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../utils/app_styles.dart';
 import '../providers/promise_provider.dart';
 import '../models/promise_model.dart';
@@ -24,6 +25,12 @@ class _PromisesScreenState extends State<PromisesScreen> {
 
   String _getStatus(PromiseModel promise) {
     if (promise.isCompleted) return 'Completed';
+
+    if (promise.isRecursive) {
+      final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      if (promise.completedDates.contains(todayStr)) return 'Completed';
+    }
+
     if (DateTime.now().isAfter(promise.endTime)) return 'Overdue';
     return 'In Progress';
   }
@@ -375,6 +382,42 @@ class _PromisesScreenState extends State<PromisesScreen> {
                           }
                         },
                   tooltip: 'Edit Promise',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  color: AppStyles.errorRed,
+                  onPressed: () async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Delete Promise'),
+                        content: const Text(
+                          'Are you sure you want to delete this promise? This cannot be undone.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text(
+                              'Delete',
+                              style: TextStyle(color: AppStyles.errorRed),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirmed == true && mounted) {
+                      await provider.deletePromise(promise.id);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Promise deleted')),
+                      );
+                    }
+                  },
+                  tooltip: 'Delete Promise',
                 ),
               ],
             ),

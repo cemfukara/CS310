@@ -14,6 +14,7 @@ class PromiseModel {
   final int priority;
   final String? sharedBy;
   final List<String> participants; // New field
+  final List<String> completedDates; // New field for recurring tasks
 
   PromiseModel({
     required this.id,
@@ -29,6 +30,7 @@ class PromiseModel {
     this.priority = 1,
     this.sharedBy,
     this.participants = const [],
+    this.completedDates = const [],
   });
 
   DateTime get endTime => startTime.add(Duration(minutes: durationMinutes));
@@ -54,6 +56,7 @@ class PromiseModel {
       priority: data['priority'] ?? 1,
       sharedBy: data['sharedBy'],
       participants: List<String>.from(data['participants'] ?? []),
+      completedDates: List<String>.from(data['completedDates'] ?? []),
     );
   }
 
@@ -71,6 +74,7 @@ class PromiseModel {
       'priority': priority,
       'sharedBy': sharedBy,
       'participants': participants,
+      'completedDates': completedDates,
     };
   }
 
@@ -88,6 +92,7 @@ class PromiseModel {
     int? priority,
     String? sharedBy,
     List<String>? participants,
+    List<String>? completedDates,
   }) {
     return PromiseModel(
       id: id ?? this.id,
@@ -103,6 +108,7 @@ class PromiseModel {
       priority: priority ?? this.priority,
       sharedBy: sharedBy ?? this.sharedBy,
       participants: participants ?? this.participants,
+      completedDates: completedDates ?? this.completedDates,
     );
   }
 }
