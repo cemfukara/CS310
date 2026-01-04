@@ -183,9 +183,12 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
   }
 
   Future<void> _pickStartDate(int index) async {
-    DateTime now = DateTime.now();
-    DateTime? initialDate = dynamicSlots[index]['start'];
-    initialDate ??= now;
+    final DateTime now = DateTime.now();
+
+    DateTime initialDate = dynamicSlots[index]['start'] ?? now;
+    if (initialDate.isBefore(now)) {
+      initialDate = now;
+    }
 
     final DateTime? pickedDate = await showDatePicker(
       context: context,
@@ -193,29 +196,37 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
       firstDate: DateTime(now.year, now.month, now.day),
       lastDate: DateTime(now.year + 5),
     );
-    if (pickedDate == null) return;
 
-    if (!mounted) return;
+    if (pickedDate == null || !mounted) return;
 
     final TimeOfDay? pickedTime = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.fromDateTime(initialDate),
+      initialTime: TimeOfDay.fromDateTime(now),
     );
+
     if (pickedTime == null) return;
 
-    final DateTime pickedDateTime = DateTime(
-      now.year,
-      now.month,
-      now.day,
-      pickedTime.hour,
-      pickedTime.minute,
-    );
+    // today only
+    final bool isToday =
+        pickedDate.year == now.year &&
+        pickedDate.month == now.month &&
+        pickedDate.day == now.day;
 
-    if (pickedDateTime.isBefore(now)) {
-      _showErrorSnackbar(
-        "Invalid time. Please select a time after ${TimeOfDay.fromDateTime(now).format(context)}.",
+    if (isToday) {
+      final DateTime pickedDateTime = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        pickedTime.hour,
+        pickedTime.minute,
       );
-      return;
+
+      if (pickedDateTime.isBefore(now)) {
+        _showErrorSnackbar(
+          "Invalid time. Please select a time after ${TimeOfDay.fromDateTime(now).format(context)}.",
+        );
+        return;
+      }
     }
 
     setState(() {

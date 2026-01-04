@@ -174,20 +174,21 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
   Future<void> _pickStartDate(int index) async {
     if (!_canEdit) return;
 
-    DateTime now = DateTime.now();
-    DateTime? initialDate = dynamicSlots[index]['start'];
-    initialDate ??= now;
+    final DateTime now = DateTime.now();
+
+    DateTime initialDate = dynamicSlots[index]['start'] ?? now;
+    if (initialDate.isBefore(now)) {
+      initialDate = now;
+    }
 
     final DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: initialDate,
-      firstDate: DateTime(now.year, now.month, now.day),
+      firstDate: DateTime(now.year, now.month, now.day), // 🚫 no past days
       lastDate: DateTime(now.year + 5),
     );
 
-    if (pickedDate == null) return;
-
-    if (!mounted) return;
+    if (pickedDate == null || !mounted) return;
 
     final TimeOfDay? pickedTime = await showTimePicker(
       context: context,
@@ -196,20 +197,28 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
 
     if (pickedTime == null) return;
 
-    final DateTime pickedDateTime = DateTime(
-      now.year,
-      now.month,
-      now.day,
-      pickedTime.hour,
-      pickedTime.minute,
-    );
+    // 🔒 SAME TIME VALIDATION LOGIC
+    final bool isToday =
+        pickedDate.year == now.year &&
+        pickedDate.month == now.month &&
+        pickedDate.day == now.day;
 
-    if (pickedDateTime.isBefore(now)) {
-      _showErrorSnackbar(
-        "Invalid time. Please select a time after "
-        "${TimeOfDay.fromDateTime(now).format(context)}.",
+    if (isToday) {
+      final DateTime pickedDateTime = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        pickedTime.hour,
+        pickedTime.minute,
       );
-      return;
+
+      if (pickedDateTime.isBefore(now)) {
+        _showErrorSnackbar(
+          "Invalid time. Please select a time after "
+          "${TimeOfDay.fromDateTime(now).format(context)}.",
+        );
+        return;
+      }
     }
 
     setState(() {

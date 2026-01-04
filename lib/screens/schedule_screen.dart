@@ -31,6 +31,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     return weekday == 7 ? 0 : weekday;
   }
 
+  bool _hasEventsForDate(List<PromiseModel> allPromises, DateTime date) {
+    return _getEventsForDate(allPromises, date).isNotEmpty;
+  }
+
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
@@ -155,7 +159,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     );
   }
 
-  Widget _buildCalendarGrid() {
+  Widget _buildCalendarGrid(List<PromiseModel> promises) {
     final daysInMonth = _getDaysInMonth(_currentMonth);
     final firstWeekday = _getFirstWeekday(_currentMonth);
     final totalCells = firstWeekday + daysInMonth;
@@ -195,6 +199,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             final date = DateTime(_currentMonth.year, _currentMonth.month, day);
             final isToday = _isSameDay(date, DateTime.now());
             final isSelected = _isSameDay(date, _selectedDate);
+            final hasEvents = _hasEventsForDate(promises, date);
 
             return GestureDetector(
               onTap: () => setState(() => _selectedDate = date),
@@ -204,6 +209,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       ? AppStyles.primaryPurple
                       : isToday
                       ? AppStyles.primaryPurple.withOpacity(0.2)
+                      : hasEvents
+                      ? AppStyles.infoBlue.withOpacity(0.2)
                       : AppStyles.nearWhite,
                   borderRadius: AppStyles.borderRadiusSmallAll,
                   border: Border.all(
@@ -301,7 +308,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   ],
                 ),
                 const SizedBox(height: AppStyles.paddingLarge),
-                _buildCalendarGrid(),
+                _buildCalendarGrid(promiseProvider.promises),
                 const SizedBox(height: AppStyles.paddingXLarge),
                 Text(
                   'Events for ${DateFormat('MMMM d').format(_selectedDate)}',
