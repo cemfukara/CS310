@@ -70,40 +70,40 @@ class _FriendsScreenState extends State<FriendsScreen>
                 onPressed: isSearching
                     ? null
                     : () async {
-                  if (emailController.text.isEmpty) return;
+                        if (emailController.text.isEmpty) return;
 
-                  setState(() => isSearching = true);
+                        setState(() => isSearching = true);
 
-                  final provider = Provider.of<FriendsProvider>(
-                    context,
-                    listen: false,
-                  );
+                        final provider = Provider.of<FriendsProvider>(
+                          context,
+                          listen: false,
+                        );
 
-                  final error = await provider.sendRequest(
-                    emailController.text,
-                  );
+                        final error = await provider.sendRequest(
+                          emailController.text,
+                        );
 
-                  if (mounted) {
-                    setState(() => isSearching = false);
-                    Navigator.pop(context);
+                        if (mounted) {
+                          setState(() => isSearching = false);
+                          Navigator.pop(context);
 
-                    if (error == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Friend request sent!'),
-                          backgroundColor: AppStyles.successGreen,
-                        ),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(error),
-                          backgroundColor: AppStyles.errorRed,
-                        ),
-                      );
-                    }
-                  }
-                },
+                          if (error == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Friend request sent!'),
+                                backgroundColor: AppStyles.successGreen,
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(error),
+                                backgroundColor: AppStyles.errorRed,
+                              ),
+                            );
+                          }
+                        }
+                      },
                 child: const Text('Send Request'),
               ),
             ],
@@ -115,15 +115,18 @@ class _FriendsScreenState extends State<FriendsScreen>
 
   // --- FIXED SAFE ACCEPT LOGIC ---
   Future<void> _handleAcceptPromise(
-      BuildContext context,
-      DatabaseService db,
-      PromiseRequestModel req,
-      ) async {
+    BuildContext context,
+    DatabaseService db,
+    PromiseRequestModel req,
+  ) async {
     // 1. CAPTURE OBJECTS BEFORE ASYNC GAP
     // This ensures we can use them even if the button widget is disposed
     final rootNavigator = Navigator.of(context, rootNavigator: true);
     final dialogNavigator = Navigator.of(context);
-    final promiseProvider = Provider.of<PromiseProvider>(context, listen: false);
+    final promiseProvider = Provider.of<PromiseProvider>(
+      context,
+      listen: false,
+    );
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     // 2. Show Loading Dialog
@@ -213,7 +216,8 @@ class _FriendsScreenState extends State<FriendsScreen>
                                 Icons.check,
                                 color: AppStyles.successGreen,
                               ),
-                              onPressed: () => _handleAcceptPromise(context, db, req),
+                              onPressed: () =>
+                                  _handleAcceptPromise(context, db, req),
                             ),
                             IconButton(
                               icon: const Icon(
@@ -238,6 +242,64 @@ class _FriendsScreenState extends State<FriendsScreen>
               onPressed: () => Navigator.pop(context),
               child: const Text('Close'),
             ),
+          ],
+        );
+      },
+    );
+  }
+
+  // notification badges
+  Widget _promiseRequestBadgeIcon({
+    required UserModel friend,
+    required DatabaseService db,
+    required VoidCallback onPressed,
+  }) {
+    return StreamBuilder<List<PromiseRequestModel>>(
+      stream: db.getPromiseRequestsStream(),
+      builder: (context, snapshot) {
+        final allRequests = snapshot.data ?? [];
+        final count = allRequests
+            .where((r) => r.senderUid == friend.uid)
+            .length;
+
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            IconButton(
+              icon: const Icon(
+                Icons.assignment_ind_outlined,
+                color: AppStyles.primaryPurple,
+              ),
+              tooltip: 'Promise Requests',
+              onPressed: onPressed,
+            ),
+
+            if (count > 0)
+              Positioned(
+                right: 6,
+                top: 6,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: AppStyles.errorRed,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 18,
+                    minHeight: 18,
+                  ),
+                  child: Center(
+                    child: Text(
+                      count > 9 ? '9+' : count.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         );
       },
@@ -335,10 +397,10 @@ class _FriendsScreenState extends State<FriendsScreen>
           itemCount: friends.length,
           itemBuilder: (context, index) {
             final friend = friends[index];
-            final initials =
-            friend.displayName.isNotEmpty
+            final initials = friend.displayName.isNotEmpty
                 ? friend.displayName[0].toUpperCase()
                 : '?';
+            final db = Provider.of<DatabaseService>(context, listen: false);
 
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
@@ -352,12 +414,9 @@ class _FriendsScreenState extends State<FriendsScreen>
                 ),
                 title: Text(friend.displayName, style: AppStyles.bodyLarge),
                 subtitle: Text(friend.email, style: AppStyles.bodySmall),
-                trailing: IconButton(
-                  icon: const Icon(
-                    Icons.assignment_ind_outlined,
-                    color: AppStyles.primaryPurple,
-                  ),
-                  tooltip: 'Promise Requests',
+                trailing: _promiseRequestBadgeIcon(
+                  friend: friend,
+                  db: db,
                   onPressed: () => _showRequestsDialog(friend),
                 ),
               ),
@@ -389,8 +448,7 @@ class _FriendsScreenState extends State<FriendsScreen>
           itemBuilder: (context, index) {
             // This 'req' is a Friend Request (UserModel), NOT a PromiseRequestModel
             final req = requests[index];
-            final initials =
-            req.displayName.isNotEmpty
+            final initials = req.displayName.isNotEmpty
                 ? req.displayName[0].toUpperCase()
                 : '?';
 
