@@ -133,11 +133,42 @@ Enable the following services from the Firebase Console to ensure the app functi
     ```
     rules_version = '2';
     service cloud.firestore {
-    match /databases/{database}/documents {
-        match /{document=**} {
-        allow read, write: if request.auth != null;
+      match /databases/{database}/documents {
+        
+        // --- USER RULES ---
+        match /users/{userId} {
+          allow read, write: if request.auth != null;
+          
+          // Allow access to subcollections
+          match /friend_requests/{docId} { allow read, write: if request.auth != null; }
+          match /friends/{docId} { allow read, write: if request.auth != null; }
+          match /promise_requests/{docId} { allow read, write: if request.auth != null; }
+          match /gamification/{docId} { allow read, write: if request.auth != null; }
         }
-    }
+        
+        // --- PROMISE RULES ---
+        match /promises/{promiseId} {
+          // 1. READ: Allow if you are the creator OR a participant
+          allow read: if request.auth != null && (
+            resource.data.createdBy == request.auth.uid ||
+            request.auth.uid in resource.data.participants
+          );
+          
+          // 2. CREATE: Allow any authenticated user
+          allow create: if request.auth != null;
+          
+          // 3. UPDATE: Allow if you are the creator OR you are in the *new* participants list
+          // (This allows you to "Accept" and add yourself to the list)
+          allow update: if request.auth != null && (
+            resource.data.createdBy == request.auth.uid ||
+            request.auth.uid in resource.data.participants ||
+            request.auth.uid in request.resource.data.participants
+          );
+          
+          // 4. DELETE: Only creator can delete
+          allow delete: if request.auth != null && resource.data.createdBy == request.auth.uid;
+        }
+      }
     }
     ```
 - Click Publish.
