@@ -3,8 +3,12 @@ import 'package:intl/intl.dart' as intl;
 import 'package:provider/provider.dart';
 import '../utils/app_styles.dart';
 import '../models/promise_model.dart';
+import '../models/user_model.dart';
+import '../models/promise_request_model.dart';
 import '../providers/promise_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/friends_provider.dart';
+import '../services/database_service.dart';
 
 class EditPromiseScreen extends StatefulWidget {
   const EditPromiseScreen({super.key});
@@ -29,6 +33,9 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
 
   List<Map<String, dynamic>> dynamicSlots = [];
 
+  // Track newly selected friends to share with
+  final List<String> _selectedFriendUids = [];
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -38,7 +45,7 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
         _originalPromise = args;
 
         // --- CHECK PERMISSIONS ---
-        // Only the creator (uid) matches the createdBy field can edit.
+        // Only the creator (uid matches createdBy) can edit.
         final currentUser = Provider.of<AuthProvider>(
           context,
           listen: false,
@@ -117,7 +124,12 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
         await provider.updatePromise(updatedPromise);
       }
 
-      // 2. CREATE NEW PROMISES (If added via "Add Slot")
+      // 2. SEND NEW SHARE REQUESTS
+      if (_selectedFriendUids.isNotEmpty) {
+        await _shareWithFriends();
+      }
+
+      // 3. CREATE NEW PROMISES (If added via "Add Slot")
       if (dynamicSlots.length > 1) {
         for (int i = 1; i < dynamicSlots.length; i++) {
           final slot = dynamicSlots[i];
@@ -155,6 +167,37 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
     }
   }
 
+  Future<void> _shareWithFriends() async {
+    final db = Provider.of<DatabaseService>(context, listen: false);
+    final currentUser = Provider.of<AuthProvider>(context, listen: false).user;
+
+    if (currentUser == null) return;
+
+    final mainSlot = dynamicSlots[0];
+    final DateTime start = mainSlot['start'];
+    final durMap = mainSlot['duration'] as Map<String, int>;
+    final totalMinutes = (durMap['hours']! * 60) + durMap['minutes']!;
+    final DateTime end = start.add(Duration(minutes: totalMinutes));
+
+    for (String friendUid in _selectedFriendUids) {
+      final request = PromiseRequestModel(
+        id: '',
+        senderUid: currentUser.uid,
+        senderName: currentUser.displayName ?? 'Friend',
+        title: _nameController.text.trim(),
+        description: _descriptionController.text.trim(),
+        startTime: start,
+        endTime: end,
+        category: _selectedCategory,
+        priority: difficultyStars,
+        sentAt: DateTime.now(),
+        linkedPromiseId: _originalPromise.id,
+      );
+
+      await db.sendPromiseRequest(friendUid, request);
+    }
+  }
+
   void _addSlot() {
     setState(() {
       dynamicSlots.add({
@@ -184,7 +227,7 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
     final DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: initialDate,
-      firstDate: DateTime(now.year, now.month, now.day), // 🚫 no past days
+      firstDate: DateTime(now.year, now.month, now.day),
       lastDate: DateTime(now.year + 5),
     );
 
@@ -197,11 +240,10 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
 
     if (pickedTime == null) return;
 
-    // 🔒 SAME TIME VALIDATION LOGIC
     final bool isToday =
         pickedDate.year == now.year &&
-        pickedDate.month == now.month &&
-        pickedDate.day == now.day;
+            pickedDate.month == now.month &&
+            pickedDate.day == now.day;
 
     if (isToday) {
       final DateTime pickedDateTime = DateTime(
@@ -215,7 +257,7 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
       if (pickedDateTime.isBefore(now)) {
         _showErrorSnackbar(
           "Invalid time. Please select a time after "
-          "${TimeOfDay.fromDateTime(now).format(context)}.",
+              "${TimeOfDay.fromDateTime(now).format(context)}.",
         );
         return;
       }
@@ -280,6 +322,104 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
     });
   }
 
+  Widget _buildFriendsSection(BuildContext context) {
+    if (!_canEdit) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 10),
+        const Text(
+          'Share with Friends',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: StreamBuilder<List<UserModel>>(
+            stream:
+            Provider.of<FriendsProvider>(context, listen: false)
+                .friendsStream,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final friends = snapshot.data ?? [];
+
+              if (friends.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text(
+                    "You haven't added any friends yet.",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                );
+              }
+
+              return Column(
+                children: [
+                  ...friends.map((friend) {
+                    final bool alreadyShared = _originalPromise.participants
+                        .contains(friend.uid);
+                    final bool isPending = _originalPromise.pendingParticipants
+                        .contains(friend.uid);
+                    final bool isSelected = _selectedFriendUids.contains(
+                      friend.uid,
+                    );
+
+                    // Logic to disable
+                    final bool isDisabled = alreadyShared || isPending;
+                    final bool isChecked =
+                        alreadyShared || isPending || isSelected;
+
+                    // Text for status
+                    String subtitleText = friend.email;
+                    if (alreadyShared) {
+                      subtitleText = "Already Shared";
+                    } else if (isPending) {
+                      subtitleText = "Request Pending";
+                    }
+
+                    return CheckboxListTile(
+                      title: Text(friend.displayName),
+                      subtitle: Text(
+                        subtitleText,
+                        style: TextStyle(
+                          color: isPending
+                              ? AppStyles.warningOrange
+                              : (alreadyShared ? AppStyles.successGreen : null),
+                        ),
+                      ),
+                      value: isChecked,
+                      activeColor: AppStyles.primaryPurple,
+                      onChanged: isDisabled
+                          ? null
+                          : (bool? value) {
+                        setState(() {
+                          if (value == true) {
+                            _selectedFriendUids.add(friend.uid);
+                          } else {
+                            _selectedFriendUids.remove(friend.uid);
+                          }
+                        });
+                      },
+                    );
+                  }),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -298,7 +438,7 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
                 margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
                   color: Colors.amber.shade100,
-                  borderRadius: BorderRadius.circular(10), // Rounded corners
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: Colors.amber.shade300),
                 ),
                 child: Row(
@@ -332,7 +472,7 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
             // --- CATEGORY SELECTOR ---
             Align(
               alignment: Alignment.centerLeft,
-              child: Text(
+              child: const Text(
                 "Category",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
@@ -346,11 +486,10 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
                   return ChoiceChip(
                     label: Text(c),
                     selected: _selectedCategory == c,
-                    // Disable selection if not owner
                     onSelected: _canEdit
                         ? (val) {
-                            if (val) setState(() => _selectedCategory = c);
-                          }
+                      if (val) setState(() => _selectedCategory = c);
+                    }
                         : null,
                     selectedColor: AppStyles.primaryPurple,
                     labelStyle: TextStyle(
@@ -383,7 +522,6 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Only show edit icons if allowed
                       if (_canEdit) ...[
                         IconButton(
                           icon: const Icon(Icons.edit_calendar),
@@ -405,13 +543,18 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
               );
             }),
 
-            // --- ACTION BUTTONS (Hidden if read-only) ---
+            // --- ACTION BUTTONS ---
             if (_canEdit && dynamicSlots.isNotEmpty)
               TextButton.icon(
                 icon: const Icon(Icons.add),
                 label: const Text('Add Slot'),
                 onPressed: _addSlot,
               ),
+
+            const SizedBox(height: 10),
+
+            // --- FRIENDS SECTION ---
+            _buildFriendsSection(context),
 
             const SizedBox(height: 20),
 

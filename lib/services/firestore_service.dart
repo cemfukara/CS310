@@ -28,7 +28,6 @@ class FirestoreService implements DatabaseService {
       throw Exception("User must be logged in to create a promise");
     }
 
-    // Add creator to participants so they can query it
     final participants = [_userId];
 
     final docRef = await _db.collection('promises').add({
@@ -43,7 +42,8 @@ class FirestoreService implements DatabaseService {
       'category': category,
       'priority': priority,
       'sharedBy': sharedBy,
-      'participants': participants, // Critical for sharing
+      'participants': participants,
+      'pendingParticipants': [], // Initialize empty
     });
 
     return docRef.id;
@@ -55,15 +55,14 @@ class FirestoreService implements DatabaseService {
 
     return _db
         .collection('promises')
-        // Query by 'participants' to include shared promises
         .where('participants', arrayContains: _userId)
         .orderBy('startTime', descending: false)
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
-              .map((doc) => PromiseModel.fromFirestore(doc))
-              .toList(),
-        );
+          .map((doc) => PromiseModel.fromFirestore(doc))
+          .toList(),
+    );
   }
 
   @override
@@ -80,10 +79,10 @@ class FirestoreService implements DatabaseService {
   // --- FRIEND METHODS ---
   @override
   Future<void> createPublicUser(
-    String uid,
-    String email,
-    String displayName,
-  ) async {
+      String uid,
+      String email,
+      String displayName,
+      ) async {
     await _db.collection('users').doc(uid).set({
       'uid': uid,
       'createdBy': uid,
@@ -108,33 +107,33 @@ class FirestoreService implements DatabaseService {
 
   @override
   Future<void> sendFriendRequest(
-    String currentUid,
-    String currentName,
-    String currentEmail,
-    String targetUid,
-  ) async {
+      String currentUid,
+      String currentName,
+      String currentEmail,
+      String targetUid,
+      ) async {
     await _db
         .collection('users')
         .doc(targetUid)
         .collection('friend_requests')
         .doc(currentUid)
         .set({
-          'uid': currentUid,
-          'displayName': currentName,
-          'email': currentEmail,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
+      'uid': currentUid,
+      'displayName': currentName,
+      'email': currentEmail,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
   }
 
   @override
   Future<void> acceptFriendRequest(
-    String currentUid,
-    String currentName,
-    String currentEmail,
-    String requestUid,
-    String requestName,
-    String requestEmail,
-  ) async {
+      String currentUid,
+      String currentName,
+      String currentEmail,
+      String requestUid,
+      String requestName,
+      String requestEmail,
+      ) async {
     final batch = _db.batch();
     final myFriendRef = _db
         .collection('users')
@@ -169,9 +168,9 @@ class FirestoreService implements DatabaseService {
 
   @override
   Future<void> declineFriendRequest(
-    String currentUid,
-    String requestUid,
-  ) async {
+      String currentUid,
+      String requestUid,
+      ) async {
     await _db
         .collection('users')
         .doc(currentUid)
@@ -190,9 +189,9 @@ class FirestoreService implements DatabaseService {
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
-              .map((doc) => UserModel.fromMap(doc.data()))
-              .toList(),
-        );
+          .map((doc) => UserModel.fromMap(doc.data()))
+          .toList(),
+    );
   }
 
   @override
@@ -205,9 +204,9 @@ class FirestoreService implements DatabaseService {
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
-              .map((doc) => UserModel.fromMap(doc.data()))
-              .toList(),
-        );
+          .map((doc) => UserModel.fromMap(doc.data()))
+          .toList(),
+    );
   }
 
   // --- GAMIFICATION IMPLEMENTATION ---
@@ -221,9 +220,9 @@ class FirestoreService implements DatabaseService {
         .doc('stats')
         .snapshots()
         .map((doc) {
-          if (!doc.exists) return UserStatsModel();
-          return UserStatsModel.fromMap(doc.data()!);
-        });
+      if (!doc.exists) return UserStatsModel();
+      return UserStatsModel.fromMap(doc.data()!);
+    });
   }
 
   @override
@@ -307,15 +306,25 @@ class FirestoreService implements DatabaseService {
 
   @override
   Future<void> sendPromiseRequest(
-    String targetUid,
-    PromiseRequestModel request,
-  ) async {
+      String targetUid,
+      PromiseRequestModel request,
+      ) async {
     if (_userId == null) return;
+
+    // 1. Create the request document
     await _db
         .collection('users')
         .doc(targetUid)
         .collection('promise_requests')
         .add(request.toMap());
+
+    // 2. Update the promise to mark this user as 'pending'
+    if (request.linkedPromiseId != null &&
+        request.linkedPromiseId!.isNotEmpty) {
+      await _db.collection('promises').doc(request.linkedPromiseId).update({
+        'pendingParticipants': FieldValue.arrayUnion([targetUid]),
+      });
+    }
   }
 
   @override
@@ -329,9 +338,9 @@ class FirestoreService implements DatabaseService {
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
-              .map((doc) => PromiseRequestModel.fromFirestore(doc))
-              .toList(),
-        );
+          .map((doc) => PromiseRequestModel.fromFirestore(doc))
+          .toList(),
+    );
   }
 
   @override
@@ -343,23 +352,19 @@ class FirestoreService implements DatabaseService {
     // 1. Try to sync with existing promise (Single Document Source)
     if (request.linkedPromiseId != null) {
       final docRef = _db.collection('promises').doc(request.linkedPromiseId);
-
-      // FIX: Removed the docRef.get() check here!
-      // We try to update blindly. Security rules allow updating if you add yourself to participants.
       try {
         await docRef.update({
           'participants': FieldValue.arrayUnion([_userId]),
+          // Remove from pending since they accepted
+          'pendingParticipants': FieldValue.arrayRemove([_userId]),
         });
         sharedSuccessfully = true;
       } catch (e) {
-        print(
-          "Could not link to shared promise (might be deleted or permission issue): $e",
-        );
-        // sharedSuccessfully remains false, triggering fallback
+        print("Could not link to shared promise: $e");
       }
     }
 
-    // 2. Fallback: If shared doc update failed (e.g. doc deleted), create a personal copy
+    // 2. Fallback
     if (!sharedSuccessfully) {
       final int duration = request.endTime
           .difference(request.startTime)
@@ -372,7 +377,7 @@ class FirestoreService implements DatabaseService {
         isRecursive: false,
         category: request.category,
         priority: request.priority,
-        sharedBy: request.senderName, // Mark as shared
+        sharedBy: request.senderName,
       );
     }
 
@@ -383,12 +388,33 @@ class FirestoreService implements DatabaseService {
   @override
   Future<void> declinePromiseRequest(String requestId) async {
     if (_userId == null) return;
-    await _db
+
+    final requestRef = _db
         .collection('users')
         .doc(_userId)
         .collection('promise_requests')
-        .doc(requestId)
-        .delete();
+        .doc(requestId);
+
+    // 1. Fetch Request to find linked promise
+    final docSnap = await requestRef.get();
+    if (docSnap.exists) {
+      final data = docSnap.data();
+      final linkedId = data?['linkedPromiseId'];
+
+      // 2. Remove user from 'pendingParticipants' in the promise
+      if (linkedId != null && linkedId is String && linkedId.isNotEmpty) {
+        try {
+          await _db.collection('promises').doc(linkedId).update({
+            'pendingParticipants': FieldValue.arrayRemove([_userId]),
+          });
+        } catch (e) {
+          // Promise might be deleted already, ignore.
+        }
+      }
+    }
+
+    // 3. Delete the request
+    await requestRef.delete();
   }
 
   @override

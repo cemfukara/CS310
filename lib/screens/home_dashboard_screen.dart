@@ -61,34 +61,6 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     );
   }
 
-  void _deletePromise(BuildContext context, String promiseId) async {
-    try {
-      await Provider.of<PromiseProvider>(
-        context,
-        listen: false,
-      ).deletePromise(promiseId);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Promise deleted'),
-            backgroundColor: AppStyles.successGreen,
-            duration: Duration(seconds: 1),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: AppStyles.errorRed,
-          ),
-        );
-      }
-    }
-  }
-
   // --- HOME TAB WRAPPED IN SCAFFOLD ---
   Widget _buildHomeTab(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -351,30 +323,20 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
             ),
           ],
         ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: Icon(
-                promise.isCompleted
-                    ? Icons.check_circle
-                    : Icons.radio_button_unchecked,
-                color: promise.isCompleted
-                    ? AppStyles.successGreen
-                    : AppStyles.mediumGray,
-              ),
-              onPressed: () {
-                Provider.of<PromiseProvider>(
-                  context,
-                  listen: false,
-                ).toggleStatus(promise.id, !promise.isCompleted);
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete_outline, color: AppStyles.errorRed),
-              onPressed: () => _deletePromise(context, promise.id),
-            ),
-          ],
+        // --- CHANGED HERE: Delete button removed, Edit button added ---
+        trailing: IconButton(
+          icon: const Icon(Icons.edit_outlined, color: AppStyles.primaryPurple),
+          onPressed: () async {
+            await Navigator.pushNamed(
+              context,
+              '/edit-promise',
+              arguments: promise,
+            );
+            // Refresh on return
+            if (context.mounted) {
+              Provider.of<PromiseProvider>(context, listen: false).reload();
+            }
+          },
         ),
       ),
     );
@@ -390,7 +352,6 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     ];
 
     return Scaffold(
-      // --- NO GLOBAL APP BAR HERE ---
       body: pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
