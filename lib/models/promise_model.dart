@@ -13,8 +13,9 @@ class PromiseModel {
   final String category;
   final int priority;
   final String? sharedBy;
-  final List<String> participants; // New field
-  final List<String> completedDates; // New field for recurring tasks
+  final List<String> participants;
+  final List<String> pendingParticipants; // New field
+  final List<String> completedDates;
 
   PromiseModel({
     required this.id,
@@ -30,6 +31,7 @@ class PromiseModel {
     this.priority = 1,
     this.sharedBy,
     this.participants = const [],
+    this.pendingParticipants = const [], // Initialize
     this.completedDates = const [],
   });
 
@@ -56,6 +58,7 @@ class PromiseModel {
       priority: data['priority'] ?? 1,
       sharedBy: data['sharedBy'],
       participants: List<String>.from(data['participants'] ?? []),
+      pendingParticipants: List<String>.from(data['pendingParticipants'] ?? []),
       completedDates: List<String>.from(data['completedDates'] ?? []),
     );
   }
@@ -74,6 +77,7 @@ class PromiseModel {
       'priority': priority,
       'sharedBy': sharedBy,
       'participants': participants,
+      'pendingParticipants': pendingParticipants,
       'completedDates': completedDates,
     };
   }
@@ -92,6 +96,7 @@ class PromiseModel {
     int? priority,
     String? sharedBy,
     List<String>? participants,
+    List<String>? pendingParticipants,
     List<String>? completedDates,
   }) {
     return PromiseModel(
@@ -108,6 +113,7 @@ class PromiseModel {
       priority: priority ?? this.priority,
       sharedBy: sharedBy ?? this.sharedBy,
       participants: participants ?? this.participants,
+      pendingParticipants: pendingParticipants ?? this.pendingParticipants,
       completedDates: completedDates ?? this.completedDates,
     );
   }

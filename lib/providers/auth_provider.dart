@@ -44,7 +44,7 @@ class AuthProvider with ChangeNotifier {
 
   // Sign Up Action
   Future<bool> signUp(String email, String password) async {
-    _setLoading(true);
+    // REMOVED: _setLoading(true); to prevent unmounting UI
     _setMessage(null);
     try {
       await _authService.signUp(email: email, password: password);
@@ -53,18 +53,18 @@ class AuthProvider with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('last_tab', 0);
 
-      _setLoading(false);
+      // REMOVED: _setLoading(false);
       return true;
     } catch (e) {
       _setMessage(e.toString());
-      _setLoading(false);
+      // REMOVED: _setLoading(false);
       return false;
     }
   }
 
   // Login Action
   Future<bool> login(String email, String password) async {
-    _setLoading(true);
+    // REMOVED: _setLoading(true); to prevent unmounting UI
     _setMessage(null);
     try {
       await _authService.signIn(email: email, password: password);
@@ -73,11 +73,11 @@ class AuthProvider with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('last_tab', 0);
 
-      _setLoading(false);
+      // REMOVED: _setLoading(false);
       return true;
     } catch (e) {
       _setMessage(e.toString());
-      _setLoading(false);
+      // REMOVED: _setLoading(false);
       return false;
     }
   }

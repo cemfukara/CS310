@@ -16,10 +16,12 @@ class _LoginScreenState extends State<LoginScreen> {
   late final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late final TextEditingController _emailController = TextEditingController();
   late final TextEditingController _passwordController =
-      TextEditingController();
+  TextEditingController();
 
   // Track if form has been submitted (to show errors on first attempt)
   bool _hasSubmitted = false;
+  // Local loading state
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -58,6 +60,10 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
+
       final authProvider = context.read<AuthProvider>();
 
       // Attempt login
@@ -65,6 +71,13 @@ class _LoginScreenState extends State<LoginScreen> {
         _emailController.text.trim(),
         _passwordController.text.trim(),
       );
+
+      // Stop loading spinner
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
 
       if (success) {
         if (mounted) {
@@ -263,18 +276,26 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       // Login Button
                       ElevatedButton(
-                        onPressed: _handleLogin,
+                        onPressed: _isLoading ? null : _handleLogin,
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
-                              Theme.of(context).brightness == Brightness.light
-                              ? AppStyles
-                                    .primaryPurple // Custom color
-                              : null, // null = fall back to global theme (dark mode)
+                          Theme.of(context).brightness == Brightness.light
+                              ? AppStyles.primaryPurple
+                              : null,
                           padding: const EdgeInsets.symmetric(
                             vertical: AppStyles.paddingMedium,
                           ),
                         ),
-                        child: Text(
+                        child: _isLoading
+                            ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                            : Text(
                           'Log In',
                           style: AppStyles.labelLarge.copyWith(
                             color: AppStyles.white,
