@@ -62,5 +62,4 @@ abstract class DatabaseService {
 
   Future<void> equipBadge(String badges);
   Future<void> equipAvatar(String avatarId);
-  Future<void> updateUserPublicProfile({String? displayName, String? email});
 }

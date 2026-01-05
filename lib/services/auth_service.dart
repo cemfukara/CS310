@@ -44,63 +44,6 @@ class AuthService {
     await _auth.signOut();
   }
 
-  // Update Display Name
-  Future<void> updateDisplayName(String name) async {
-    try {
-      await currentUser?.updateDisplayName(name);
-      await currentUser?.reload();
-    } on FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
-    }
-  }
-
-  // Update Email (Requires re-authentication)
-  Future<void> updateEmail({
-    required String newEmail,
-    required String password,
-  }) async {
-    try {
-      final user = currentUser;
-      if (user == null || user.email == null) throw 'User not found';
-
-      // Re-authenticate user
-      AuthCredential credential = EmailAuthProvider.credential(
-        email: user.email!,
-        password: password,
-      );
-      await user.reauthenticateWithCredential(credential);
-
-      // Update email
-      await user.verifyBeforeUpdateEmail(newEmail);
-      await user.reload();
-    } on FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
-    }
-  }
-
-  // Update Password (Requires current password for verification)
-  Future<void> updatePassword({
-    required String currentPassword,
-    required String newPassword,
-  }) async {
-    try {
-      final user = currentUser;
-      if (user == null || user.email == null) throw 'User not found';
-
-      // Re-authenticate user
-      AuthCredential credential = EmailAuthProvider.credential(
-        email: user.email!,
-        password: currentPassword,
-      );
-      await user.reauthenticateWithCredential(credential);
-
-      // Update password
-      await user.updatePassword(newPassword);
-    } on FirebaseAuthException catch (e) {
-      throw _handleAuthException(e);
-    }
-  }
-
   // Helper to make error messages user-friendly
   String _handleAuthException(FirebaseAuthException e) {
     switch (e.code) {

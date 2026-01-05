@@ -90,11 +90,6 @@ class MockDatabaseService implements DatabaseService {
   Future<void> equipBadge(String badges) async {}
   @override
   Future<void> equipAvatar(String avatarId) async {}
-  @override
-  Future<void> updateUserPublicProfile({
-    String? displayName,
-    String? email,
-  }) async {}
 }
 
 void main() {

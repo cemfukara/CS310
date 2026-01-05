@@ -2,12 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
-import '../services/database_service.dart';
-import '../services/firestore_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
-  final DatabaseService _dbService = FirestoreService();
 
   User? _user;
   bool _isLoading = false;
@@ -94,51 +91,5 @@ class AuthProvider with ChangeNotifier {
   void clearError() {
     _errorMessage = null;
     notifyListeners();
-  }
-
-  // Update Profile Name
-  Future<bool> updateProfile(String name) async {
-    _setMessage(null);
-    try {
-      await _authService.updateDisplayName(name);
-      await _dbService.updateUserPublicProfile(displayName: name);
-      await refreshUser();
-      return true;
-    } catch (e) {
-      _setMessage(e.toString());
-      return false;
-    }
-  }
-
-  // Update Email
-  Future<bool> updateEmail(String newEmail, String password) async {
-    _setMessage(null);
-    try {
-      await _authService.updateEmail(newEmail: newEmail, password: password);
-      await _dbService.updateUserPublicProfile(email: newEmail);
-      await refreshUser();
-      return true;
-    } catch (e) {
-      _setMessage(e.toString());
-      return false;
-    }
-  }
-
-  // Update Password
-  Future<bool> updatePassword(
-    String currentPassword,
-    String newPassword,
-  ) async {
-    _setMessage(null);
-    try {
-      await _authService.updatePassword(
-        currentPassword: currentPassword,
-        newPassword: newPassword,
-      );
-      return true;
-    } catch (e) {
-      _setMessage(e.toString());
-      return false;
-    }
   }
 }
