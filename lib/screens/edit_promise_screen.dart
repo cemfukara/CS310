@@ -218,10 +218,11 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
     if (!_canEdit) return;
 
     final DateTime now = DateTime.now();
+    final DateTime earliestAllowed = now.subtract(const Duration(minutes: 5));
 
     DateTime initialDate = dynamicSlots[index]['start'] ?? now;
-    if (initialDate.isBefore(now)) {
-      initialDate = now;
+    if (initialDate.isBefore(earliestAllowed)) {
+      initialDate = earliestAllowed;
     }
 
     final DateTime? pickedDate = await showDatePicker(
@@ -230,20 +231,18 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
       firstDate: DateTime(now.year, now.month, now.day),
       lastDate: DateTime(now.year + 5),
     );
-
     if (pickedDate == null || !mounted) return;
 
     final TimeOfDay? pickedTime = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(initialDate),
     );
-
     if (pickedTime == null) return;
 
     final bool isToday =
         pickedDate.year == now.year &&
-            pickedDate.month == now.month &&
-            pickedDate.day == now.day;
+        pickedDate.month == now.month &&
+        pickedDate.day == now.day;
 
     if (isToday) {
       final DateTime pickedDateTime = DateTime(
@@ -254,10 +253,9 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
         pickedTime.minute,
       );
 
-      if (pickedDateTime.isBefore(now)) {
+      if (pickedDateTime.isBefore(earliestAllowed)) {
         _showErrorSnackbar(
-          "Invalid time. Please select a time after "
-              "${TimeOfDay.fromDateTime(now).format(context)}.",
+          "You can select a time up to 5 minutes in the past.",
         );
         return;
       }
@@ -342,9 +340,10 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
             border: Border.all(color: Colors.grey.shade300),
           ),
           child: StreamBuilder<List<UserModel>>(
-            stream:
-            Provider.of<FriendsProvider>(context, listen: false)
-                .friendsStream,
+            stream: Provider.of<FriendsProvider>(
+              context,
+              listen: false,
+            ).friendsStream,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -401,14 +400,14 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
                       onChanged: isDisabled
                           ? null
                           : (bool? value) {
-                        setState(() {
-                          if (value == true) {
-                            _selectedFriendUids.add(friend.uid);
-                          } else {
-                            _selectedFriendUids.remove(friend.uid);
-                          }
-                        });
-                      },
+                              setState(() {
+                                if (value == true) {
+                                  _selectedFriendUids.add(friend.uid);
+                                } else {
+                                  _selectedFriendUids.remove(friend.uid);
+                                }
+                              });
+                            },
                     );
                   }),
                 ],
@@ -488,8 +487,8 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
                     selected: _selectedCategory == c,
                     onSelected: _canEdit
                         ? (val) {
-                      if (val) setState(() => _selectedCategory = c);
-                    }
+                            if (val) setState(() => _selectedCategory = c);
+                          }
                         : null,
                     selectedColor: AppStyles.primaryPurple,
                     labelStyle: TextStyle(

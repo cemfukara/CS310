@@ -184,10 +184,11 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
 
   Future<void> _pickStartDate(int index) async {
     final DateTime now = DateTime.now();
+    final DateTime earliestAllowed = now.subtract(const Duration(minutes: 5));
 
     DateTime initialDate = dynamicSlots[index]['start'] ?? now;
-    if (initialDate.isBefore(now)) {
-      initialDate = now;
+    if (initialDate.isBefore(earliestAllowed)) {
+      initialDate = earliestAllowed;
     }
 
     final DateTime? pickedDate = await showDatePicker(
@@ -196,17 +197,14 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
       firstDate: DateTime(now.year, now.month, now.day),
       lastDate: DateTime(now.year + 5),
     );
-
     if (pickedDate == null || !mounted) return;
 
     final TimeOfDay? pickedTime = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.fromDateTime(now),
+      initialTime: TimeOfDay.fromDateTime(initialDate),
     );
-
     if (pickedTime == null) return;
 
-    // today only
     final bool isToday =
         pickedDate.year == now.year &&
         pickedDate.month == now.month &&
@@ -221,9 +219,9 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
         pickedTime.minute,
       );
 
-      if (pickedDateTime.isBefore(now)) {
+      if (pickedDateTime.isBefore(earliestAllowed)) {
         _showErrorSnackbar(
-          "Invalid time. Please select a time after ${TimeOfDay.fromDateTime(now).format(context)}.",
+          "You can select a time up to 5 minutes in the past.",
         );
         return;
       }
