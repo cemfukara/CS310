@@ -1,6 +1,4 @@
 
-<!-- Personal Space -->
-
 <!-- 
 Gelse bile son günüm
 Koluna alsa ölüm
@@ -15,7 +13,12 @@ Gelip de bana sorsalar
 Gözlerime bakıp da
 Her şeyi anlasalar
 -->
-
+<!-- 
+/\
+||
+Congrats! You found an easter egg 
+       (RESPECT +)
+-->
 
 
 
@@ -264,6 +267,7 @@ This includes unit tests and widget tests located in the `test/` directory.
 
 ## Known Limitations / Bugs
 
-Recursive shared Promise is buggy, completion of a Promise of this type is not synced
+- Store items are limited, simple items. Will be extended in the future
+- Notifications will send when Promise starts, and when Promise deadline approaches
 
 ---
