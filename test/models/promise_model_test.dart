@@ -34,14 +34,16 @@ void main() {
         startTime: startTime,
         durationMinutes: durationMinutes,
         isRecursive: true,
-        isCompleted: false,
+        // REMOVED: isCompleted: false,
+        // ADDED: completedBy list
+        completedBy: const ['user1'],
         createdBy: 'user1',
         createdAt: createdAt,
         category: 'Work',
         priority: 2,
         sharedBy: 'friend1',
         participants: const ['user1'],
-        completedDates: const ['2025-01-01'],
+        completedDates: const ['2025-01-01_user1'],
       );
 
       final mapped = promise.toMap();
@@ -49,8 +51,10 @@ void main() {
       expect(mapped['title'], 'Test');
       expect(mapped['isRecursive'], true);
       expect(mapped['priority'], 2);
-      expect(mapped['completedDates'], const ['2025-01-01']);
+      expect(mapped['completedDates'], const ['2025-01-01_user1']);
       expect(mapped['sharedBy'], 'friend1');
+      // Verify new field
+      expect(mapped['completedBy'], const ['user1']);
     });
 
     test('copyWith should only update specified fields', () {
@@ -71,6 +75,24 @@ void main() {
       expect(updated.title, 'Updated');
       expect(updated.description, 'Original');
       expect(updated.id, '1');
+    });
+
+    test('isCompletedForUser returns correct status', () {
+      final promise = PromiseModel(
+        id: '1',
+        title: 'Test',
+        description: 'Desc',
+        startTime: startTime,
+        durationMinutes: 60,
+        isRecursive: false,
+        // User 1 has completed it, User 2 has not
+        completedBy: const ['user1'],
+        createdBy: 'owner',
+        createdAt: createdAt,
+      );
+
+      expect(promise.isCompletedForUser('user1'), true);
+      expect(promise.isCompletedForUser('user2'), false);
     });
   });
 }

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../utils/app_styles.dart';
 import '../providers/promise_provider.dart';
+import '../providers/auth_provider.dart';
 import '../models/promise_model.dart';
 
 class PromisesScreen extends StatefulWidget {
@@ -23,12 +24,12 @@ class _PromisesScreenState extends State<PromisesScreen> {
     'Family',
   ];
 
-  String _getStatus(PromiseModel promise) {
-    if (promise.isCompleted) return 'Completed';
+  String _getStatus(PromiseModel promise, String uid) {
+    if (promise.isCompletedForUser(uid)) return 'Completed';
 
     if (promise.isRecursive) {
-      final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      if (promise.completedDates.contains(todayStr)) return 'Completed';
+      final today = DateTime.now();
+      if (promise.isCompletedForUser(uid, date: today)) return 'Completed';
     }
 
     if (DateTime.now().isAfter(promise.endTime)) return 'Overdue';
@@ -63,9 +64,14 @@ class _PromisesScreenState extends State<PromisesScreen> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 600;
+    final currentUser = Provider.of<AuthProvider>(context).user;
 
     return Consumer<PromiseProvider>(
       builder: (context, promiseProvider, child) {
+        if (currentUser == null) {
+          return const Scaffold(body: Center(child: Text("Please log in")));
+        }
+        final uid = currentUser.uid;
         final allPromises = promiseProvider.promises;
 
         int overdueCount = 0;
@@ -73,7 +79,7 @@ class _PromisesScreenState extends State<PromisesScreen> {
         int inProgressCount = 0;
 
         for (var p in allPromises) {
-          String status = _getStatus(p);
+          String status = _getStatus(p, uid);
           if (status == 'Completed')
             completedCount++;
           else if (status == 'In Progress')
@@ -85,21 +91,20 @@ class _PromisesScreenState extends State<PromisesScreen> {
         final categoryFilteredPromises = _selectedCategory == 'All'
             ? allPromises
             : allPromises
-                  .where((p) => p.category == _selectedCategory)
-                  .toList();
+            .where((p) => p.category == _selectedCategory)
+            .toList();
 
         final activePromises = categoryFilteredPromises
-            .where((p) => !p.isCompleted)
+            .where((p) => !p.isCompletedForUser(uid))
             .toList();
         final completedPromises = categoryFilteredPromises
-            .where((p) => p.isCompleted)
+            .where((p) => p.isCompletedForUser(uid))
             .toList();
 
         return Scaffold(
           appBar: AppBar(
             title: const Text('All Promises'),
             centerTitle: true,
-            // --- ADDED ACTIONS ---
             actions: [
               IconButton(
                 icon: const Icon(Icons.person_outline),
@@ -220,6 +225,7 @@ class _PromisesScreenState extends State<PromisesScreen> {
                       context,
                       activePromises,
                       promiseProvider,
+                      uid,
                     ),
 
                   const SizedBox(height: AppStyles.paddingXLarge),
@@ -236,6 +242,7 @@ class _PromisesScreenState extends State<PromisesScreen> {
                         context,
                         completedPromises,
                         promiseProvider,
+                        uid,
                       ),
 
                   const SizedBox(height: AppStyles.paddingXXLarge),
@@ -288,14 +295,16 @@ class _PromisesScreenState extends State<PromisesScreen> {
   }
 
   List<Widget> _buildRealPromisesList(
-    BuildContext context,
-    List<PromiseModel> promises,
-    PromiseProvider provider,
-  ) {
+      BuildContext context,
+      List<PromiseModel> promises,
+      PromiseProvider provider,
+      String uid,
+      ) {
     return promises.map((promise) {
-      final status = _getStatus(promise);
+      final status = _getStatus(promise, uid);
       final statusColor = _getStatusColor(status);
       final statusIcon = _getStatusIcon(status);
+      final isCompleted = promise.isCompletedForUser(uid);
 
       return Padding(
         padding: const EdgeInsets.only(bottom: AppStyles.paddingMedium),
@@ -313,10 +322,10 @@ class _PromisesScreenState extends State<PromisesScreen> {
                       Text(
                         promise.title,
                         style: AppStyles.bodyLarge.copyWith(
-                          decoration: promise.isCompleted
+                          decoration: isCompleted
                               ? TextDecoration.lineThrough
                               : null,
-                          color: promise.isCompleted
+                          color: isCompleted
                               ? AppStyles.mediumGray
                               : AppStyles.darkGray,
                         ),
@@ -369,18 +378,18 @@ class _PromisesScreenState extends State<PromisesScreen> {
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),
                   color: AppStyles.primaryPurple,
-                  onPressed: promise.isCompleted
+                  onPressed: isCompleted
                       ? null
                       : () async {
-                          await Navigator.pushNamed(
-                            context,
-                            '/edit-promise',
-                            arguments: promise,
-                          );
-                          if (mounted) {
-                            provider.reload();
-                          }
-                        },
+                    await Navigator.pushNamed(
+                      context,
+                      '/edit-promise',
+                      arguments: promise,
+                    );
+                    if (mounted) {
+                      provider.reload();
+                    }
+                  },
                   tooltip: 'Edit Promise',
                 ),
                 IconButton(

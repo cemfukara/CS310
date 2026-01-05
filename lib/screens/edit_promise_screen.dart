@@ -78,7 +78,7 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
       {
         'start': promise.startTime,
         'duration': {'hours': hours, 'minutes': minutes},
-        'completed': promise.isCompleted,
+        // FIX: Removed 'completed': promise.isCompleted
         'is_recurring': promise.isRecursive,
       },
     ];
@@ -110,13 +110,14 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
         final durMap = mainSlot['duration'] as Map<String, int>;
         final totalMinutes = (durMap['hours']! * 60) + durMap['minutes']!;
 
+        // FIX: Removed isCompleted from copyWith.
+        // This preserves the existing completedBy/completedDates lists in the model.
         final updatedPromise = _originalPromise.copyWith(
           title: _nameController.text.trim(),
           description: _descriptionController.text.trim(),
           startTime: mainSlot['start'],
           durationMinutes: totalMinutes,
           isRecursive: mainSlot['is_recurring'],
-          isCompleted: mainSlot['completed'],
           category: _selectedCategory,
           priority: difficultyStars,
         );
@@ -203,7 +204,7 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
       dynamicSlots.add({
         'start': DateTime.now(),
         'duration': {'hours': 1, 'minutes': 0},
-        'completed': false,
+        // FIX: Removed 'completed': false
         'is_recurring': false,
       });
     });
@@ -241,8 +242,8 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
 
     final bool isToday =
         pickedDate.year == now.year &&
-        pickedDate.month == now.month &&
-        pickedDate.day == now.day;
+            pickedDate.month == now.month &&
+            pickedDate.day == now.day;
 
     if (isToday) {
       final DateTime pickedDateTime = DateTime(
@@ -400,14 +401,14 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
                       onChanged: isDisabled
                           ? null
                           : (bool? value) {
-                              setState(() {
-                                if (value == true) {
-                                  _selectedFriendUids.add(friend.uid);
-                                } else {
-                                  _selectedFriendUids.remove(friend.uid);
-                                }
-                              });
-                            },
+                        setState(() {
+                          if (value == true) {
+                            _selectedFriendUids.add(friend.uid);
+                          } else {
+                            _selectedFriendUids.remove(friend.uid);
+                          }
+                        });
+                      },
                     );
                   }),
                 ],
@@ -487,8 +488,8 @@ class _EditPromiseScreenState extends State<EditPromiseScreen> {
                     selected: _selectedCategory == c,
                     onSelected: _canEdit
                         ? (val) {
-                            if (val) setState(() => _selectedCategory = c);
-                          }
+                      if (val) setState(() => _selectedCategory = c);
+                    }
                         : null,
                     selectedColor: AppStyles.primaryPurple,
                     labelStyle: TextStyle(

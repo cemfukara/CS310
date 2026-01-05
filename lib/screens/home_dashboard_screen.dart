@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/promise_provider.dart';
+import '../providers/auth_provider.dart'; // Needed for UID
 import '../models/promise_model.dart';
 import '../utils/app_styles.dart';
 import 'schedule_screen.dart';
@@ -65,6 +66,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   Widget _buildHomeTab(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 600;
+    final currentUser = Provider.of<AuthProvider>(context).user;
 
     return Scaffold(
       appBar: AppBar(
@@ -91,8 +93,13 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
+          if (currentUser == null) {
+            return const Center(child: Text("Please log in"));
+          }
+
+          // Filter using user-specific completion logic
           final promises = promiseProvider.promises
-              .where((p) => !p.isCompleted)
+              .where((p) => !p.isCompletedForUser(currentUser.uid))
               .toList();
 
           return RefreshIndicator(
@@ -286,8 +293,14 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   }
 
   Widget _buildPromiseCard(BuildContext context, PromiseModel promise) {
+    // Determine priority color
     Color priorityColor;
-    if (promise.isCompleted) {
+    // We check user-specific completion here for color logic, though list is filtered
+    final currentUser =
+        Provider.of<AuthProvider>(context, listen: false).user?.uid ?? '';
+    final isDone = promise.isCompletedForUser(currentUser);
+
+    if (isDone) {
       priorityColor = Colors.green[800]!;
     } else if (promise.priority >= 5) {
       priorityColor = AppStyles.errorRed;
@@ -323,7 +336,6 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
             ),
           ],
         ),
-        // --- CHANGED HERE: Delete button removed, Edit button added ---
         trailing: IconButton(
           icon: const Icon(Icons.edit_outlined, color: AppStyles.primaryPurple),
           onPressed: () async {
@@ -332,7 +344,6 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
               '/edit-promise',
               arguments: promise,
             );
-            // Refresh on return
             if (context.mounted) {
               Provider.of<PromiseProvider>(context, listen: false).reload();
             }
