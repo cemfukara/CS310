@@ -122,9 +122,9 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
   }
 
   Future<void> _sendLinkedPromiseRequests(
-    List<String> promiseIds,
-    List<Map<String, dynamic>> slotData,
-  ) async {
+      List<String> promiseIds,
+      List<Map<String, dynamic>> slotData,
+      ) async {
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final db = Provider.of<DatabaseService>(context, listen: false);
@@ -162,7 +162,7 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
 
   void _addSlot() {
     setState(
-      () => dynamicSlots.add({
+          () => dynamicSlots.add({
         'start': null,
         'duration': {'hours': 1, 'minutes': 0},
       }),
@@ -207,8 +207,8 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
 
     final bool isToday =
         pickedDate.year == now.year &&
-        pickedDate.month == now.month &&
-        pickedDate.day == now.day;
+            pickedDate.month == now.month &&
+            pickedDate.day == now.day;
 
     if (isToday) {
       final DateTime pickedDateTime = DateTime(
@@ -256,7 +256,8 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
         return AlertDialog(
           title: const Text('Select Day of Week'),
           content: DropdownButtonFormField<String>(
-            initialValue: selectedDay,
+            value:
+            selectedDay, // Use value instead of initialValue to track updates
             items: weekdays
                 .map((day) => DropdownMenuItem(value: day, child: Text(day)))
                 .toList(),
@@ -283,25 +284,33 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
       );
       if (pickedTime == null) return;
 
-      DateTime now = DateTime.now();
-      int currentWeekday = now.weekday;
+      final DateTime now = DateTime.now();
+      final int currentWeekday = now.weekday;
       final int dayIndex = weekdays.indexOf(resultDay.toString());
-      int targetWeekday = dayIndex + 1;
+      final int targetWeekday = dayIndex + 1; // Mon=1 ... Sun=7
 
-      DateTime targetDate = now.add(
-        Duration(days: (targetWeekday - currentWeekday + 7) % 7),
-      );
-      if (targetDate.isBefore(now)) {
-        targetDate = targetDate.add(const Duration(days: 7));
-      }
+      // 1. Calculate the date difference to the target day
+      // (target - current + 7) % 7 ensures a positive result (0 to 6 days away)
+      int daysToAdd = (targetWeekday - currentWeekday + 7) % 7;
 
-      final DateTime finalDateTime = DateTime(
-        targetDate.year,
-        targetDate.month,
-        targetDate.day,
+      // 2. Create the candidate date
+      DateTime candidateDate = now.add(Duration(days: daysToAdd));
+
+      // 3. Combine with the picked time IMMEDIATELY
+      DateTime finalDateTime = DateTime(
+        candidateDate.year,
+        candidateDate.month,
+        candidateDate.day,
         pickedTime.hour,
         pickedTime.minute,
       );
+
+      // 4. Critical Check: If the resulting time is in the past (e.g. today but earlier time),
+      // THEN add 7 days to move to next week.
+      // Use a small buffer (e.g., 1 minute) to allow "now" selections to pass if they are close.
+      if (finalDateTime.isBefore(now.subtract(const Duration(minutes: 1)))) {
+        finalDateTime = finalDateTime.add(const Duration(days: 7));
+      }
 
       setState(() {
         dynamicSlots[index]['start'] = finalDateTime;
@@ -414,10 +423,10 @@ class _NewPromiseScreenState extends State<NewPromiseScreen> {
   }
 
   Widget _buildTimeSlotChip(
-    String label,
-    bool isSelected, {
-    VoidCallback? onTap,
-  }) {
+      String label,
+      bool isSelected, {
+        VoidCallback? onTap,
+      }) {
     return InkWell(
       onTap: onTap,
       child: Container(

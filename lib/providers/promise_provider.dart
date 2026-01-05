@@ -16,7 +16,6 @@ class PromiseProvider with ChangeNotifier {
 
   void updateDatabase(DatabaseService db) {
     _db = db;
-    // CRITICAL FIX: Restart listener when user changes so we don't show old data
     _listenToPromises();
   }
 
@@ -24,15 +23,13 @@ class PromiseProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
 
   void _listenToPromises() {
-    // 1. Clear old data immediately to prevent leakage
     _promises = [];
     _isLoading = true;
     notifyListeners();
 
-    // 2. Cancel old subscription and start new one
     _promisesSubscription?.cancel();
     _promisesSubscription = _db.getPromisesStream().listen(
-      (promiseList) {
+          (promiseList) {
         _promises = promiseList;
         _isLoading = false;
         notifyListeners();
@@ -50,7 +47,6 @@ class PromiseProvider with ChangeNotifier {
     await Future.delayed(const Duration(milliseconds: 500));
   }
 
-  // Updated: Returns the ID of the created promise
   Future<String> addPromise({
     required String title,
     required String description,
@@ -87,7 +83,13 @@ class PromiseProvider with ChangeNotifier {
     }
   }
 
-  Future<void> toggleStatus(String id, bool newStatus, {DateTime? date}) async {
+  // --- UPDATED TOGGLE STATUS ---
+  Future<void> toggleStatus(
+      String id,
+      String uid, // Needs UID to bind completion to user
+      bool newStatus, {
+        DateTime? date,
+      }) async {
     try {
       final index = _promises.indexWhere((p) => p.id == id);
       if (index != -1) {
@@ -95,40 +97,43 @@ class PromiseProvider with ChangeNotifier {
         PromiseModel updatedPromise;
 
         if (promise.isRecursive && date != null) {
+          // Recursive Logic: "yyyy-MM-dd_uid"
           final dateStr =
               "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+          final tag = "${dateStr}_$uid"; // Unique tag per user per date
+
           final newCompletedDates = List<String>.from(promise.completedDates);
 
           if (newStatus) {
-            if (!newCompletedDates.contains(dateStr)) {
-              newCompletedDates.add(dateStr);
+            if (!newCompletedDates.contains(tag)) {
+              newCompletedDates.add(tag);
             }
           } else {
-            newCompletedDates.remove(dateStr);
+            newCompletedDates.remove(tag);
           }
           updatedPromise = promise.copyWith(completedDates: newCompletedDates);
         } else {
-          updatedPromise = promise.copyWith(isCompleted: newStatus);
+          // Non-Recursive Logic: Add/Remove UID from completedBy
+          final newCompletedBy = List<String>.from(promise.completedBy);
+          if (newStatus) {
+            if (!newCompletedBy.contains(uid)) {
+              newCompletedBy.add(uid);
+            }
+          } else {
+            newCompletedBy.remove(uid);
+          }
+          updatedPromise = promise.copyWith(completedBy: newCompletedBy);
         }
 
+        // Optimistic Update
         _promises[index] = updatedPromise;
         notifyListeners();
 
+        // Database Update
         await _db.updatePromise(updatedPromise);
 
         if (newStatus == true) {
-          // Trigger gamification updates (Xp, Coins, Stats)
           await _db.updateCoins(50);
-          // NEW: Increment total completed and check streaks/achievements
-          // Note: Realistically this should be handled by a higher-level coordinator
-          // or the provider should have access to GamificationProvider.
-          // For now, we manually call the DB methods if they are simple enough,
-          // or we rely on GamificationProvider listening to the same DB.
-          // However, GamificationProvider.handlePromiseCompletion has complex logic (streak).
-          // We'll let the UI or a coordinator call it, OR we can inject GamificationProvider
-          // but that's circular.
-          // BEST WAY: PromiseProvider only updates DB. GamificationProvider listens to stats AND promises?
-          // No, let's keep it simple: Add a method to DatabaseService or just call the logic here.
         }
       }
     } catch (e) {
