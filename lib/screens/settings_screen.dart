@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../utils/app_styles.dart';
 import 'package:provider/provider.dart';
 import 'package:promise/providers/theme_provider.dart';
+import 'package:promise/providers/auth_provider.dart';
 
 /// Settings Screen - App configuration and preferences
 class SettingsScreen extends StatefulWidget {
@@ -21,6 +22,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 600;
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final authProvider = Provider.of<AuthProvider>(context);
+    final user = authProvider.user;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings'), centerTitle: true),
@@ -36,21 +39,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: AppStyles.paddingMedium),
             _buildSettingsTile(
               title: 'Profile Information',
-              subtitle: 'Update your profile details',
+              subtitle: user?.displayName ?? 'Update your profile details',
               icon: Icons.person,
-              onTap: () => _showProfileDialog(),
+              onTap: () => _showProfileDialog(authProvider),
             ),
             _buildSettingsTile(
               title: 'Change Password',
               subtitle: 'Update your password',
               icon: Icons.lock,
-              onTap: () => _showPasswordDialog(),
+              onTap: () => _showPasswordDialog(authProvider),
             ),
             _buildSettingsTile(
               title: 'Email Address',
-              subtitle: 'user@example.com',
+              subtitle: user?.email ?? 'user@example.com',
               icon: Icons.email,
-              onTap: () => _showEmailDialog(),
+              onTap: () => _showEmailDialog(authProvider),
             ),
             const SizedBox(height: AppStyles.paddingXLarge),
 
@@ -239,7 +242,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showProfileDialog() {
+  void _showProfileDialog(AuthProvider authProvider) {
+    final nameController = TextEditingController(
+      text: authProvider.user?.displayName,
+    );
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -248,22 +255,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
+              controller: nameController,
               decoration: InputDecoration(
                 labelText: 'Full Name',
                 border: OutlineInputBorder(
                   borderRadius: AppStyles.borderRadiusSmallAll,
                 ),
               ),
-            ),
-            const SizedBox(height: AppStyles.paddingMedium),
-            TextField(
-              decoration: InputDecoration(
-                labelText: 'Bio',
-                border: OutlineInputBorder(
-                  borderRadius: AppStyles.borderRadiusSmallAll,
-                ),
-              ),
-              maxLines: 3,
             ),
           ],
         ),
@@ -273,11 +271,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Profile updated successfully')),
+            onPressed: () async {
+              final success = await authProvider.updateProfile(
+                nameController.text,
               );
-              Navigator.pop(context);
+              if (mounted) {
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Profile updated successfully'),
+                    ),
+                  );
+                  Navigator.pop(context);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        authProvider.errorMessage ?? 'Failed to update profile',
+                      ),
+                    ),
+                  );
+                }
+              }
             },
             child: const Text('Save'),
           ),
@@ -286,7 +301,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showPasswordDialog() {
+  void _showPasswordDialog(AuthProvider authProvider) {
+    final currentController = TextEditingController();
+    final newController = TextEditingController();
+    final confirmController = TextEditingController();
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -295,6 +314,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
+              controller: currentController,
               decoration: InputDecoration(
                 labelText: 'Current Password',
                 border: OutlineInputBorder(
@@ -305,6 +325,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: AppStyles.paddingMedium),
             TextField(
+              controller: newController,
               decoration: InputDecoration(
                 labelText: 'New Password',
                 border: OutlineInputBorder(
@@ -315,6 +336,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: AppStyles.paddingMedium),
             TextField(
+              controller: confirmController,
               decoration: InputDecoration(
                 labelText: 'Confirm Password',
                 border: OutlineInputBorder(
@@ -331,11 +353,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Password updated successfully')),
+            onPressed: () async {
+              if (newController.text != confirmController.text) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Passwords do not match')),
+                );
+                return;
+              }
+
+              final success = await authProvider.updatePassword(
+                currentController.text,
+                newController.text,
               );
-              Navigator.pop(context);
+
+              if (mounted) {
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Password updated successfully'),
+                    ),
+                  );
+                  Navigator.pop(context);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        authProvider.errorMessage ??
+                            'Failed to update password',
+                      ),
+                    ),
+                  );
+                }
+              }
             },
             child: const Text('Update'),
           ),
@@ -344,18 +393,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showEmailDialog() {
+  void _showEmailDialog(AuthProvider authProvider) {
+    final emailController = TextEditingController(
+      text: authProvider.user?.email,
+    );
+    final passwordController = TextEditingController();
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Change Email'),
-        content: TextField(
-          decoration: InputDecoration(
-            labelText: 'New Email Address',
-            border: OutlineInputBorder(
-              borderRadius: AppStyles.borderRadiusSmallAll,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: emailController,
+              decoration: InputDecoration(
+                labelText: 'New Email Address',
+                border: OutlineInputBorder(
+                  borderRadius: AppStyles.borderRadiusSmallAll,
+                ),
+              ),
             ),
-          ),
+            const SizedBox(height: AppStyles.paddingMedium),
+            TextField(
+              controller: passwordController,
+              decoration: InputDecoration(
+                labelText: 'Password (to confirm)',
+                border: OutlineInputBorder(
+                  borderRadius: AppStyles.borderRadiusSmallAll,
+                ),
+              ),
+              obscureText: true,
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -363,13 +434,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Verification email sent')),
+            onPressed: () async {
+              final success = await authProvider.updateEmail(
+                emailController.text,
+                passwordController.text,
               );
-              Navigator.pop(context);
+              if (mounted) {
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Verification email sent to new address'),
+                    ),
+                  );
+                  Navigator.pop(context);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        authProvider.errorMessage ?? 'Failed to update email',
+                      ),
+                    ),
+                  );
+                }
+              }
             },
-            child: const Text('Send Verification'),
+            child: const Text('Update'),
           ),
         ],
       ),
@@ -430,6 +519,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showLogoutDialog() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -441,8 +531,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pushReplacementNamed(context, '/login');
+            onPressed: () async {
+              await authProvider.logout();
+              if (mounted) {
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/login',
+                  (route) => false,
+                );
+              }
             },
             child: const Text('Sign Out'),
           ),

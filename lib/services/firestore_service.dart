@@ -60,9 +60,9 @@ class FirestoreService implements DatabaseService {
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
-          .map((doc) => PromiseModel.fromFirestore(doc))
-          .toList(),
-    );
+              .map((doc) => PromiseModel.fromFirestore(doc))
+              .toList(),
+        );
   }
 
   @override
@@ -79,10 +79,10 @@ class FirestoreService implements DatabaseService {
   // --- FRIEND METHODS ---
   @override
   Future<void> createPublicUser(
-      String uid,
-      String email,
-      String displayName,
-      ) async {
+    String uid,
+    String email,
+    String displayName,
+  ) async {
     await _db.collection('users').doc(uid).set({
       'uid': uid,
       'createdBy': uid,
@@ -107,33 +107,33 @@ class FirestoreService implements DatabaseService {
 
   @override
   Future<void> sendFriendRequest(
-      String currentUid,
-      String currentName,
-      String currentEmail,
-      String targetUid,
-      ) async {
+    String currentUid,
+    String currentName,
+    String currentEmail,
+    String targetUid,
+  ) async {
     await _db
         .collection('users')
         .doc(targetUid)
         .collection('friend_requests')
         .doc(currentUid)
         .set({
-      'uid': currentUid,
-      'displayName': currentName,
-      'email': currentEmail,
-      'timestamp': FieldValue.serverTimestamp(),
-    });
+          'uid': currentUid,
+          'displayName': currentName,
+          'email': currentEmail,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
   }
 
   @override
   Future<void> acceptFriendRequest(
-      String currentUid,
-      String currentName,
-      String currentEmail,
-      String requestUid,
-      String requestName,
-      String requestEmail,
-      ) async {
+    String currentUid,
+    String currentName,
+    String currentEmail,
+    String requestUid,
+    String requestName,
+    String requestEmail,
+  ) async {
     final batch = _db.batch();
     final myFriendRef = _db
         .collection('users')
@@ -168,9 +168,9 @@ class FirestoreService implements DatabaseService {
 
   @override
   Future<void> declineFriendRequest(
-      String currentUid,
-      String requestUid,
-      ) async {
+    String currentUid,
+    String requestUid,
+  ) async {
     await _db
         .collection('users')
         .doc(currentUid)
@@ -189,9 +189,9 @@ class FirestoreService implements DatabaseService {
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
-          .map((doc) => UserModel.fromMap(doc.data()))
-          .toList(),
-    );
+              .map((doc) => UserModel.fromMap(doc.data()))
+              .toList(),
+        );
   }
 
   @override
@@ -204,9 +204,9 @@ class FirestoreService implements DatabaseService {
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
-          .map((doc) => UserModel.fromMap(doc.data()))
-          .toList(),
-    );
+              .map((doc) => UserModel.fromMap(doc.data()))
+              .toList(),
+        );
   }
 
   // --- GAMIFICATION IMPLEMENTATION ---
@@ -220,9 +220,9 @@ class FirestoreService implements DatabaseService {
         .doc('stats')
         .snapshots()
         .map((doc) {
-      if (!doc.exists) return UserStatsModel();
-      return UserStatsModel.fromMap(doc.data()!);
-    });
+          if (!doc.exists) return UserStatsModel();
+          return UserStatsModel.fromMap(doc.data()!);
+        });
   }
 
   @override
@@ -306,9 +306,9 @@ class FirestoreService implements DatabaseService {
 
   @override
   Future<void> sendPromiseRequest(
-      String targetUid,
-      PromiseRequestModel request,
-      ) async {
+    String targetUid,
+    PromiseRequestModel request,
+  ) async {
     if (_userId == null) return;
 
     // 1. Create the request document
@@ -338,9 +338,9 @@ class FirestoreService implements DatabaseService {
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
-          .map((doc) => PromiseRequestModel.fromFirestore(doc))
-          .toList(),
-    );
+              .map((doc) => PromiseRequestModel.fromFirestore(doc))
+              .toList(),
+        );
   }
 
   @override
@@ -439,5 +439,23 @@ class FirestoreService implements DatabaseService {
         .collection('gamification')
         .doc('stats');
     await ref.set({'equippedAvatar': avatarId}, SetOptions(merge: true));
+  }
+
+  @override
+  Future<void> updateUserPublicProfile({
+    String? displayName,
+    String? email,
+  }) async {
+    if (_userId == null) return;
+    final updates = <String, dynamic>{};
+    if (displayName != null) updates['displayName'] = displayName;
+    if (email != null) {
+      updates['email'] = email;
+      updates['searchEmail'] = email.toLowerCase();
+    }
+
+    if (updates.isNotEmpty) {
+      await _db.collection('users').doc(_userId).update(updates);
+    }
   }
 }
