@@ -36,15 +36,14 @@ class FirestoreService implements DatabaseService {
       'startTime': Timestamp.fromDate(startTime),
       'durationMinutes': durationMinutes,
       'isRecursive': isRecursive,
-      'completedBy': [], // Initialize empty
+      'isCompleted': false,
       'createdBy': _userId,
       'createdAt': FieldValue.serverTimestamp(),
       'category': category,
       'priority': priority,
       'sharedBy': sharedBy,
       'participants': participants,
-      'pendingParticipants': [],
-      'completedDates': [],
+      'pendingParticipants': [], // Initialize empty
     });
 
     return docRef.id;
@@ -312,12 +311,14 @@ class FirestoreService implements DatabaseService {
   ) async {
     if (_userId == null) return;
 
+    // 1. Create the request document
     await _db
         .collection('users')
         .doc(targetUid)
         .collection('promise_requests')
         .add(request.toMap());
 
+    // 2. Update the promise to mark this user as 'pending'
     if (request.linkedPromiseId != null &&
         request.linkedPromiseId!.isNotEmpty) {
       await _db.collection('promises').doc(request.linkedPromiseId).update({
@@ -348,11 +349,13 @@ class FirestoreService implements DatabaseService {
 
     bool sharedSuccessfully = false;
 
+    // 1. Try to sync with existing promise (Single Document Source)
     if (request.linkedPromiseId != null) {
       final docRef = _db.collection('promises').doc(request.linkedPromiseId);
       try {
         await docRef.update({
           'participants': FieldValue.arrayUnion([_userId]),
+          // Remove from pending since they accepted
           'pendingParticipants': FieldValue.arrayRemove([_userId]),
         });
         sharedSuccessfully = true;
@@ -361,6 +364,7 @@ class FirestoreService implements DatabaseService {
       }
     }
 
+    // 2. Fallback
     if (!sharedSuccessfully) {
       final int duration = request.endTime
           .difference(request.startTime)
@@ -377,6 +381,7 @@ class FirestoreService implements DatabaseService {
       );
     }
 
+    // 3. Remove the request
     await declinePromiseRequest(request.id);
   }
 
@@ -390,22 +395,25 @@ class FirestoreService implements DatabaseService {
         .collection('promise_requests')
         .doc(requestId);
 
+    // 1. Fetch Request to find linked promise
     final docSnap = await requestRef.get();
     if (docSnap.exists) {
       final data = docSnap.data();
       final linkedId = data?['linkedPromiseId'];
 
+      // 2. Remove user from 'pendingParticipants' in the promise
       if (linkedId != null && linkedId is String && linkedId.isNotEmpty) {
         try {
           await _db.collection('promises').doc(linkedId).update({
             'pendingParticipants': FieldValue.arrayRemove([_userId]),
           });
         } catch (e) {
-          // Promise might be deleted already
+          // Promise might be deleted already, ignore.
         }
       }
     }
 
+    // 3. Delete the request
     await requestRef.delete();
   }
 

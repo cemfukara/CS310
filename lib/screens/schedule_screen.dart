@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import '../utils/app_styles.dart';
 import '../providers/promise_provider.dart';
 import '../providers/gamification_provider.dart';
-import '../providers/auth_provider.dart'; // Added
 import '../models/promise_model.dart';
 
 class ScheduleScreen extends StatefulWidget {
@@ -41,26 +40,26 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       a.year == b.year && a.month == b.month && a.day == b.day;
 
   List<PromiseModel> _getEventsForDate(
-      List<PromiseModel> allPromises,
-      DateTime date,
-      ) {
+    List<PromiseModel> allPromises,
+    DateTime date,
+  ) {
     return allPromises.where((promise) {
       if (!promise.isRecursive) {
         return _isSameDay(promise.startTime, date);
       }
       final isAfterStart =
           date.isAtSameMomentAs(promise.startTime) ||
-              date.isAfter(promise.startTime);
+          date.isAfter(promise.startTime);
       final isSameWeekday = promise.startTime.weekday == date.weekday;
       return isAfterStart && isSameWeekday;
     }).toList();
   }
 
-  Widget _buildEventItem(PromiseModel promise, String uid) {
-    final isActuallyCompleted = promise.isCompletedForUser(
-      uid,
-      date: _selectedDate,
-    );
+  Widget _buildEventItem(PromiseModel promise) {
+    final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+    final isActuallyCompleted = promise.isRecursive
+        ? promise.completedDates.contains(dateStr)
+        : promise.isCompleted;
 
     final timeStr =
         '${DateFormat('HH:mm').format(promise.startTime)} - ${DateFormat('HH:mm').format(promise.endTime)}';
@@ -154,27 +153,25 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               onPressed: (isActuallyCompleted && !promise.isRecursive)
                   ? null
                   : () async {
-                final provider = Provider.of<PromiseProvider>(
-                  context,
-                  listen: false,
-                );
-                final gamification = Provider.of<GamificationProvider>(
-                  context,
-                  listen: false,
-                );
+                      final provider = Provider.of<PromiseProvider>(
+                        context,
+                        listen: false,
+                      );
+                      final gamification = Provider.of<GamificationProvider>(
+                        context,
+                        listen: false,
+                      );
 
-                // PASS UID here
-                await provider.toggleStatus(
-                  promise.id,
-                  uid,
-                  !isActuallyCompleted,
-                  date: _selectedDate,
-                );
+                      await provider.toggleStatus(
+                        promise.id,
+                        !isActuallyCompleted,
+                        date: _selectedDate,
+                      );
 
-                if (!isActuallyCompleted) {
-                  await gamification.handlePromiseCompletion();
-                }
-              },
+                      if (!isActuallyCompleted) {
+                        await gamification.handlePromiseCompletion();
+                      }
+                    },
             ),
           ],
         ),
@@ -194,15 +191,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           children: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
               .map(
                 (day) => Expanded(
-              child: Text(
-                day,
-                textAlign: TextAlign.center,
-                style: AppStyles.labelMedium.copyWith(
-                  color: AppStyles.mediumGray,
+                  child: Text(
+                    day,
+                    textAlign: TextAlign.center,
+                    style: AppStyles.labelMedium.copyWith(
+                      color: AppStyles.mediumGray,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          )
+              )
               .toList(),
         ),
         const SizedBox(height: AppStyles.paddingSmall),
@@ -265,21 +262,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = Provider.of<AuthProvider>(context).user;
-
     return Consumer<PromiseProvider>(
       builder: (context, promiseProvider, child) {
-        if (currentUser == null) {
-          return const Scaffold(body: Center(child: Text("Please log in")));
-        }
-        final uid = currentUser.uid;
-
         final dailyEvents = _getEventsForDate(
           promiseProvider.promises,
           _selectedDate,
         );
         dailyEvents.sort(
-              (a, b) => a.startTime.hour.compareTo(b.startTime.hour),
+          (a, b) => a.startTime.hour.compareTo(b.startTime.hour),
         );
 
         return Scaffold(
@@ -316,7 +306,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     IconButton(
                       icon: const Icon(Icons.chevron_left),
                       onPressed: () => setState(
-                            () => _currentMonth = DateTime(
+                        () => _currentMonth = DateTime(
                           _currentMonth.year,
                           _currentMonth.month - 1,
                         ),
@@ -329,7 +319,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     IconButton(
                       icon: const Icon(Icons.chevron_right),
                       onPressed: () => setState(
-                            () => _currentMonth = DateTime(
+                        () => _currentMonth = DateTime(
                           _currentMonth.year,
                           _currentMonth.month + 1,
                         ),
@@ -354,9 +344,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   )
                 else
                   ...dailyEvents.map(
-                        (event) => Padding(
+                    (event) => Padding(
                       padding: const EdgeInsets.only(bottom: 12.0),
-                      child: _buildEventItem(event, uid),
+                      child: _buildEventItem(event),
                     ),
                   ),
               ],
